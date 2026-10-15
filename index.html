@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bedazzle Booth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Doto:wght@900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <video id="video" playsinline muted></video>
+
+    <div id="stage">
+      <canvas id="gl"></canvas>
+      <canvas id="fx"></canvas>
+      <div id="cropmask"></div>
+      <div id="countdown"></div>
+      <div id="flash"></div>
+    </div>
+
+    <!-- Decorate UI -->
+    <aside id="toolbar" class="panel hidden">
+      <button class="tool on" data-tool="gem" title="Gem">◆<span>Gem</span></button>
+      <button class="tool" data-tool="brush" title="Brush">✦<span>Brush</span></button>
+      <button class="tool" data-tool="eraser" title="Eraser">✕<span>Erase</span></button>
+      <button class="tool" id="undo" title="Undo (Z)">↺<span>Undo</span></button>
+      <div id="brushOpts" class="hidden">
+        <button class="mini on" data-brush="star">★</button>
+        <button class="mini" data-brush="heart">♥</button>
+        <button class="mini" data-brush="trail">∿</button>
+      </div>
+      <button class="tool done" id="done" title="Done (Enter)">✓<span>Done</span></button>
+    </aside>
+
+    <aside id="tray" class="panel hidden">
+      <div class="sizes">
+        <button class="mini" data-size="small">S</button>
+        <button class="mini on" data-size="medium">M</button>
+        <button class="mini" data-size="large">L</button>
+      </div>
+      <div id="trayGrid"></div>
+    </aside>
+
+    <div id="lcd" class="lcd hidden"><span id="lcdText"></span><div id="thumbBar"><i></i></div></div>
+    <button id="oops" class="gel hidden">Oops, bring them back</button>
+    <button id="musicBtn" class="round" title="Music">♪</button>
+    <div id="cursor" class="hidden"></div>
+
+    <!-- Screens -->
+    <section id="landing" class="screen">
+      <h1>Bedazzle<br />Booth</h1>
+      <p class="tag">Pinch. Drag. Sparkle. Then take the selfie.</p>
+      <div class="musicPick lcd">
+        <label><input type="checkbox" id="musicOn" /> Music</label>
+        <select id="trackSel"></select>
+      </div>
+      <button id="start" class="gel big">Start</button>
+      <p class="fine">Everything runs in your browser. No video or photos leave your device.</p>
+    </section>
+
+    <section id="check" class="screen hidden">
+      <h2 id="checkTitle">Loading trackers…</h2>
+      <div class="lcd checks">
+        <div id="chkFace" class="chk">Face <b>…</b></div>
+        <div id="chkHand" class="chk">Hand <b>…</b></div>
+      </div>
+      <p class="fine" id="checkHint">Show your face, then raise a hand.</p>
+      <button id="skipHand" class="gel hidden">Use mouse instead</button>
+    </section>
+
+    <section id="setup" class="screen hidden">
+      <h2>Selfie time</h2>
+      <div class="row" id="layoutPick"></div>
+      <div class="row" id="bgPick"></div>
+      <div class="row">
+        <button id="setupBack" class="gel">Back</button>
+        <button id="takePhoto" class="gel big">Take photo</button>
+      </div>
+    </section>
+
+    <section id="result" class="screen hidden">
+      <img id="resultImg" alt="Your photo" />
+      <div class="row">
+        <button id="save" class="gel big">Save PNG</button>
+        <button id="retake" class="gel">Retake</button>
+        <button id="retake1" class="gel hidden">Retake cut 1</button>
+        <button id="retake2" class="gel hidden">Retake cut 2</button>
+        <button id="backDecor" class="gel">Back to decorate</button>
+        <button id="startOver" class="gel">Start over</button>
+      </div>
+    </section>
+
+    <section id="error" class="screen hidden">
+      <h2 id="errTitle">Something went wrong</h2>
+      <p id="errBody"></p>
+      <button class="gel" onclick="location.reload()">Try again</button>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
