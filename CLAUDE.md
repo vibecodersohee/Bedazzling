@@ -6,7 +6,7 @@ Stack: Vite + TypeScript, Three.js (ortho scene, video plane + invisible face de
 
 - `src/config.ts` all tunable numbers (pinch thresholds, gem counts, cooldowns)
 - `src/tracking.ts` landmarkers + One Euro smoothing; triangles derived from tessellation
-- `src/hand.ts` gestures (pinch, point, fist=undo, thumbs up=done, snap=clear)
+- `src/hand.ts` gestures (pinch, point, fist=undo, thumbs up=done)
 - `src/stage.ts` scene, face hit-testing, barycentric gem anchoring
 - `src/gems.ts` gem types, geometry, instanced renderer
 - `src/main.ts` flow, pointer logic (mouse and hand share press/move/release), brush, capture

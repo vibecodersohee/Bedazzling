@@ -7,29 +7,23 @@ export const CONFIG = {
     wasm: `${import.meta.env.BASE_URL}mediapipe/wasm`,
   },
   smoothing: {
-    face: { minCutoff: 2.0, beta: 15 },
+    face: { minCutoff: 4.0, beta: 120, dCutoff: 8 },
     hand: { minCutoff: 1.5, beta: 12 },
   },
   gestures: {
-    pinchEngage: 0.3, // thumb-index distance / hand size
-    pinchRelease: 0.45,
+    pinchEngage: 0.36, // thumb-index distance / hand size
+    pinchRelease: 0.58,
+    dwellMs: 900, // hover over a button this long to press it without pinching
     modeConfirmMs: 150,
     fistHoldMs: 500,
     thumbsUpHoldMs: 1000,
     undoCooldownMs: 900,
-    snapContact: 0.25, // middle-thumb distance counted as touching
-    snapOpen: 0.5, // distance counted as released
-    snapMaxMs: 150, // contact -> open must happen within this
-    snapCooldownMs: 1500,
-    snapRestoreMs: 5000,
   },
   face: { lostMs: 600 },
   gems: {
     max: 400,
     refFaceWidth: 420, // tray sizes are px at this face width
-    sizesPx: { small: 7, medium: 12, large: 20 } as Record<string, number>,
-    stampRadius: 0.17, // fraction of face width
-    stampCount: 22,
+    sizesPx: { small: 7, medium: 20, large: 46 } as Record<string, number>,
     trailSpacing: 0.035, // fraction of face width
     sitOnSurface: 0.42, // offset along normal, in gem sizes
   },

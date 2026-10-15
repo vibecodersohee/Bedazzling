@@ -1,6 +1,6 @@
 import { CONFIG } from './config';
 
-export type HandEvent = 'undo' | 'done' | 'snap';
+export type HandEvent = 'undo' | 'done';
 export interface HandState {
   present: boolean;
   /** Cursor in mirrored normalized image space (0..1). */
@@ -24,9 +24,6 @@ export class HandGestures {
   private fistFired = false;
   private thumbSince = 0;
   private thumbFired = false;
-  private lastContact = -1e9;
-  private snapReady = false;
-  private lastSnap = -1e9;
   private lastUndo = -1e9;
   constructor(private aspect: number) {}
 
@@ -50,8 +47,8 @@ export class HandGestures {
       return s;
     }
     s.present = true;
-    s.x = 1 - l[8 * 3];
-    s.y = l[8 * 3 + 1];
+    s.x = 1 - (l[8 * 3] + l[4 * 3]) / 2;
+    s.y = (l[8 * 3 + 1] + l[4 * 3 + 1]) / 2;
 
     const size = Math.max(this.d(l, WRIST, 9), 1e-4);
     const ratio = (tip: number, mcp: number) => this.d(l, tip, WRIST) / Math.max(this.d(l, mcp, WRIST), 1e-4);
@@ -66,7 +63,7 @@ export class HandGestures {
     const fistLike = allCurled && !thumbUp;
     if (this.pinching) {
       if (pinchD > G.pinchRelease) this.pinching = false;
-    } else if (pinchD < G.pinchEngage && !fistLike) {
+    } else if (pinchD < G.pinchEngage && (!fistLike || pinchD < 0.22)) {
       this.pinching = true;
     }
     s.pinching = this.pinching;
@@ -108,22 +105,6 @@ export class HandGestures {
       s.thumbsUpProgress = 0;
     }
 
-    // Snap: middle fingertip touches thumb, then opens fast.
-    const snapD = this.d(l, 12, 4) / size;
-    if (!this.pinching && pinchD > G.snapOpen) {
-      if (snapD < G.snapContact) {
-        this.lastContact = now;
-        this.snapReady = true;
-      } else if (this.snapReady && snapD > G.snapOpen) {
-        this.snapReady = false;
-        if (now - this.lastContact <= G.snapMaxMs && now - this.lastSnap > G.snapCooldownMs) {
-          this.lastSnap = now;
-          s.events.push('snap');
-        }
-      } else if (now - this.lastContact > G.snapMaxMs) {
-        this.snapReady = false;
-      }
-    } else this.snapReady = false;
     return s;
   }
 }

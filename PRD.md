@@ -1,6 +1,6 @@
 # PRD: Bedazzle Booth
 
-Version 0.2 | Draft | Updated October 13, 2026
+Version 0.3 | Draft | Updated October 15, 2026
 Build tool: Claude Code, one phase at a time (see section 14)
 
 ---
@@ -18,7 +18,7 @@ The look we are chasing (from the reference photos): a few large hero stones, ma
 ### Goals
 1. Placing a gem feels magical and easy: pinch, drag, release, and it sticks.
 2. Gems stay convincingly attached to the face through head rotation and expression changes.
-3. Users can build the full "scattered gems" look quickly, not one stone at a time (stamp shapes, freehand trail).
+3. Users can build the full "scattered gems" look quickly, not one stone at a time (freehand trail).
 4. The result is a photo worth saving and sharing.
 5. The interface feels like a bold, glossy, modern Y2K revival that Gen-Z finds fun.
 
@@ -40,14 +40,16 @@ Gen-Z users on a laptop or desktop with a webcam who enjoy beauty and nostalgia 
 | Platform | Desktop first, webcam required |
 | Flow | Two big steps: Decorate, then Selfie |
 | Decoration methods | Single gems (pinch and drag) plus brush |
-| Brush | Stamp shapes first (star, heart), freehand trail as a bonus |
+| Brush | Freehand trail only (point and move). Star and heart stamps were removed in v0.3 |
 | Gem tray | Round, teardrop, star, heart, in several sizes and colors |
 | Photo | Single selfie to start; user picks 1 cut or 2 cuts |
 | 2 cut layout | Two photos stacked vertically |
 | Backgrounds | User picks a background for the photo (like a collage board with stamp frames, bows, butterflies) |
 | Finish gesture | Thumbs up held for 1 second, with a Done button as fallback |
-| Fun feature | Finger snap removes all gems in the Decorate step |
-| Music | 3 Y2K style background tracks, user can turn on and off |
+| Fun feature | None for now. Finger snap was removed in v0.3 because it was confusing next to pinch |
+| Onboarding | Gesture guide screen on first Decorate, reopen with the Help button (v0.3) |
+| Pressing buttons by hand | Pinch, or hold the cursor over a button about 1 second (dwell) (v0.3) |
+| Music | 3 Y2K style background tracks, user can turn on and off. v0.3 uses synthesized loops, no licensed files |
 | Visual style | Bedazzled Y2K gadget: hot pink, glossy, modern, less cute. No device frame |
 | Font | DotGothic16 (flip phone style pixel font) |
 | Name | Bedazzle Booth (final) |
@@ -87,8 +89,9 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 
 ### 7.1 Layout
 - The live camera fills the screen and is mirrored.
-- Gem tray sits on one side with gems grouped by shape, size and color.
-- A tool bar holds four tools: Gem, Brush, Eraser, Undo. Buttons are large enough to hit with a pinch.
+- Gem tray sits on the right: pick a color, pick a size, then pinch one of four big shape buttons to take a gem.
+- A tool bar on the left holds Gem, Brush, Eraser, Undo, Help and Done. Buttons are large enough to hit with a pinch.
+- A gesture guide shows on the first visit to Decorate. Cards light up when the matching gesture is detected.
 - A small status area shows tracking state and short messages in the LCD style (see section 9).
 - The camera area stays clean of decoration so the face is the hero.
 
@@ -96,51 +99,35 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 
 | Action | Gesture | Notes |
 |---|---|---|
-| Move cursor | Index fingertip (landmark 8) | Mirrored to match the camera view |
+| Move cursor | Midpoint of thumb tip (4) and index tip (8) | Mirrored to match the camera view. Stays steady while pinching |
 | Pick a gem | Pinch over a gem in the tray | Pinch = thumb tip (4) close to index tip (8) |
 | Place a gem | Keep pinching, drag over the face, release | Gem snaps to the nearest face surface point |
-| Press a tool or button | Pinch while hovering | Hover shows a highlight, pinch confirms |
+| Press a tool or button | Pinch while hovering, or hold still over it for about 1 second | Hover shows a highlight, the cursor ring fills during the hold |
 | Move a placed gem | Pinch the gem on the face, drag, release | |
 | Remove a placed gem | Pinch it, drag it off the face, release | Gem pops with a small sparkle |
-| Stamp a shape | With Brush active, choose star or heart, pinch to place | See 7.3 |
-| Freehand trail (bonus) | With Brush active, point with index finger only (other fingers curled) and move over the face | See 7.3 |
-| Undo | Closed fist held for half a second, or the Undo button | Undoes the last placement or stamp |
-| Finger snap | Middle fingertip (12) pressed to thumb, then released quickly | Removes all gems, see 7.4 |
+| Freehand trail | With Brush active, point with index finger only (other fingers curled) and move over the face | See 7.3 |
+| Undo | Closed fist held for half a second, or the Undo button | Undoes the last placement or stroke |
 | Finish | Thumbs up held for 1 second, or Done button | Show a progress ring while holding |
 
 Gesture rules:
-- Pinch uses hysteresis: engage when the thumb to index distance is below about 0.30 of hand size, release when it rises above about 0.45. Hand size is wrist to middle finger base. These numbers are starting points and must be tunable in a config file.
+- Pinch uses hysteresis: engage when the thumb to index distance is below about 0.36 of hand size, release when it rises above about 0.58. Hand size is wrist to middle finger base. These numbers are starting points and must be tunable in a config file.
 - Pointing (freehand) and pinching must never trigger each other by accident. Use a short confirmation delay (about 150 ms) before switching mode.
 - Every gesture has a mouse and keyboard equivalent: click and drag to place, right click or Eraser to remove, Z to undo, Enter for Done.
 - When the hand covers the face, face tracking can become unstable. Keep existing gems locked to the last good face pose for a short time rather than letting them jump.
 
-### 7.3 Brush
-
-**Stamp shapes (build first):**
-- The user picks a shape (star, heart; butterfly is a nice later addition) and a gem color or mix.
-- A preview outline follows the fingertip over the face, projected onto the surface.
-- Pinch to place. Gems automatically fill the outline, with size variation (a few larger gems, many small ones) so it looks scattered like the reference photos.
-- Typical fill is 12 to 30 gems per stamp, tunable.
-- The whole stamp counts as one undo step.
-
-**Freehand trail (bonus, build after stamps work):**
-- Point with the index finger and move across the face. Small gems spawn along the path with random size and slight spacing jitter.
-- Reuse the same gem spacing and size variation logic as stamps.
+### 7.3 Brush (freehand trail)
+- With Brush active, point with the index finger only (or drag the mouse) and move across the face.
+- Small gems spawn along the path with random size and slight spacing jitter, with an occasional larger one.
 - Stop drawing when the finger leaves the face area or the hand changes pose.
-
-### 7.4 Finger snap: remove all gems
-- Detect a snap as: middle fingertip and thumb touching, followed by a fast release. Use the speed of the release, not only the distance, so slow movements do not count.
-- When triggered, all gems burst off the face with a sparkle animation and fall away.
-- Cooldown of about 1.5 seconds after a snap.
-- Safety net: an "Oops, bring them back" button appears for 5 seconds after a snap and restores everything.
-- Do not use microphone based snap detection (extra permission, and the background music would cause false triggers).
+- One stroke counts as one undo step.
+- Star and heart stamps were tried and removed in v0.3. They can come back later (see section 13).
 
 ### 7.5 Gem system
 
 | Property | Options (version 1) |
 |---|---|
 | Shapes | Round, teardrop, star, heart |
-| Sizes | Small, medium, large (a hero size can be added) |
+| Sizes | Small (7 px), medium (20 px), large (46 px, a hero stone like the heart in the reference photo). Pixel values are at a 420 px wide face and scale with the face |
 | Colors | Pink family first (hot pink, light pink, ruby), plus clear/diamond, blue, purple, green, gold. Mixed "rainbow" option for scatter |
 | Behavior | Faces outward along the surface normal, small random rotation, slight random size variation |
 | Limit | Cap at about 400 gems total, show a friendly message if reached |
@@ -244,7 +231,8 @@ Pink is the hero. Silver, white and small hits of icy blue or lilac add sparkle.
 ## 13. Later ideas (not in version 1)
 
 - 4 cut photobooth strip
-- More shapes (butterfly, bow, sparkle) and more stamp shapes
+- Stamp shapes (star, heart, butterfly) and more gem shapes (bow, sparkle)
+- Clear all button (replaces the removed finger snap)
 - Theme packs for gems and backgrounds
 - Share sheet or link
 - Mobile touch version
@@ -272,8 +260,8 @@ Four shapes, sizes, colors, environment map and sparkle, instancing, gem cap.
 Check: 200 gems at 30 FPS on a mid range laptop.
 
 **Phase 4: Brush**
-Stamp shapes (star, heart) with gem fill and undo as one step. Then freehand trail as a bonus.
-Check: a heart stamp on the cheek looks scattered and natural.
+Freehand trail with random size and spacing, one undo step per stroke.
+Check: a trail on the cheek looks scattered and natural.
 
 **Phase 5: Selfie step**
 Done button and thumbs up hold, layout choice (1 cut, 2 cuts stacked), placeholder backgrounds and stickers loaded from the asset manifest, countdown, capture, result screen, PNG save, retake and back to decorate.
@@ -283,9 +271,9 @@ Check: a saved 2 cut PNG shows gems, correct mirroring, and the chosen placehold
 Palette, DotGothic16, glossy buttons, rhinestone trim, LCD windows and microcopy, sparkle effects, 3 music tracks with toggle and ducking, shutter sound.
 Check: the interface matches the Bedazzled Gadget direction and music toggles cleanly.
 
-**Phase 7: Finger snap and final polish**
-Snap detection with cooldown and Oops restore, performance pass, edge case handling, cross browser check.
-Check: snap clears gems reliably without false triggers during normal gestures.
+**Phase 7: Final polish**
+Performance pass, edge case handling, cross browser check.
+Check: normal gestures never trigger undo or done by accident.
 
 ### Tips for working with Claude Code
 - Put this file in the project root as PRD.md and ask Claude Code to read it first.

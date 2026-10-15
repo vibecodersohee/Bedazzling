@@ -11,10 +11,11 @@ export interface TrackResult {
 export class Tracker {
   private face!: FaceLandmarker;
   private hand!: HandLandmarker;
-  private faceF = new OneEuroArray(FACE_POINTS * 3, CONFIG.smoothing.face.minCutoff, CONFIG.smoothing.face.beta);
+  private faceF = new OneEuroArray(FACE_POINTS * 3, CONFIG.smoothing.face.minCutoff, CONFIG.smoothing.face.beta, CONFIG.smoothing.face.dCutoff);
   private handF = new OneEuroArray(21 * 3, CONFIG.smoothing.hand.minCutoff, CONFIG.smoothing.hand.beta);
   private lastFace = 0;
   private lastHand = 0;
+  private lastHandOut: Float32Array | null = null;
   private buf = new Float32Array(FACE_POINTS * 3);
   private hbuf = new Float32Array(21 * 3);
   /** Triangle indices derived from the tessellation edges. */
@@ -43,7 +44,7 @@ export class Tracker {
     this.triangles = buildTriangles(FaceLandmarker.FACE_LANDMARKS_TESSELATION);
   }
 
-  detect(video: HTMLVideoElement, nowMs: number): TrackResult {
+  detect(video: HTMLVideoElement, nowMs: number, runHand = true): TrackResult {
     const t = nowMs / 1000;
     let face: Float32Array | null = null;
     let hand: Float32Array | null = null;
@@ -71,6 +72,7 @@ export class Tracker {
       face = this.faceF.filter(this.buf, t);
     }
 
+    if (!runHand) return { face, hand: this.lastHandOut };
     const hr = this.hand.detectForVideo(video, nowMs);
     if (hr.landmarks.length) {
       const h = hr.landmarks[0];
@@ -83,6 +85,7 @@ export class Tracker {
       }
       hand = this.handF.filter(this.hbuf, t);
     }
+    this.lastHandOut = hand;
     return { face, hand };
   }
 }

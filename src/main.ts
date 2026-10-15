@@ -16,11 +16,10 @@ const fx = $<HTMLCanvasElement>('fx');
 const fxg = fx.getContext('2d')!;
 const audio = new Audio();
 
-type Phase = 'landing' | 'check' | 'decorate' | 'setup' | 'capture' | 'result' | 'error';
+type Phase = 'landing' | 'check' | 'guide' | 'decorate' | 'setup' | 'capture' | 'result' | 'error';
 type Tool = 'gem' | 'brush' | 'eraser';
 let phase: Phase = 'landing';
 let tool: Tool = 'gem';
-let brush: 'star' | 'heart' | 'trail' = 'star';
 const sel = { shape: 'round' as Shape, color: 'hot', size: 'medium' as SizeKey };
 
 let stage: Stage;
@@ -33,7 +32,6 @@ let VH = CONFIG.video.height;
 
 let gems: Gem[] = [];
 let falling: Gem[] = [];
-let backup: Gem[] = [];
 const history: (() => void)[] = [];
 let drag: { gem: Gem; existing: boolean; prev?: { mode: Gem['mode']; tri: number; b: [number, number, number] } } | null = null;
 let stroke: number[] | null = null;
@@ -68,6 +66,7 @@ function setPhase(p: Phase) {
   const dec = p === 'decorate';
   show('landing', p === 'landing');
   show('check', p === 'check');
+  show('guide', p === 'guide');
   show('setup', p === 'setup');
   show('result', p === 'result');
   show('error', p === 'error');
@@ -75,7 +74,6 @@ function setPhase(p: Phase) {
   show('tray', dec);
   show('lcd', dec || p === 'check');
   $('check').classList.toggle('clear', true);
-  if (p !== 'decorate') $('oops').classList.add('hidden');
   if (p === 'capture') say('', 0);
   $('cropmask').style.display = p === 'capture' ? 'block' : 'none';
 }
@@ -124,28 +122,44 @@ function gemSvg(shape: Shape, colorKey: string, idx: number): string {
   return `<svg viewBox="0 0 40 40"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient></defs><g fill="url(#${id})" stroke="#fff" stroke-width="1.6" stroke-linejoin="round">${body}</g><circle cx="15" cy="14" r="2.6" fill="#fff" opacity=".85"/></svg>`;
 }
 function buildTray() {
-  const grid = $('trayGrid');
-  let i = 0;
+  const sg = $('shapeGrid');
+  SHAPES.forEach((sh, i) => {
+    const b = document.createElement('button');
+    b.className = 'gemBtn';
+    b.dataset.shape = sh;
+    b.title = sh;
+    b.dataset.i = String(i);
+    sg.appendChild(b);
+  });
+  const cg = $('colorGrid');
   for (const c of Object.keys(COLORS)) {
-    for (const s of SHAPES) {
-      const b = document.createElement('button');
-      b.className = 'gemBtn';
-      b.dataset.gem = `${s}:${c}`;
-      b.title = `${COLORS[c].label} ${s}`;
-      b.innerHTML = gemSvg(s, c, i++);
-      grid.appendChild(b);
-    }
+    const b = document.createElement('button');
+    b.className = 'colBtn';
+    b.dataset.color = c;
+    b.title = COLORS[c].label;
+    b.style.background =
+      c === 'rainbow' ? 'linear-gradient(135deg,#ff6ec7,#6bbcff,#ffcf4d,#b98aff)' : '#' + COLORS[c].hex.toString(16).padStart(6, '0');
+    cg.appendChild(b);
   }
   markTray();
 }
 function markTray() {
-  document.querySelectorAll<HTMLElement>('.gemBtn').forEach((b) => b.classList.toggle('on', b.dataset.gem === `${sel.shape}:${sel.color}`));
+  document.querySelectorAll<HTMLElement>('.gemBtn').forEach((b, i) => {
+    b.innerHTML = gemSvg(b.dataset.shape as Shape, sel.color, i);
+    b.classList.toggle('on', b.dataset.shape === sel.shape);
+  });
+  document.querySelectorAll<HTMLElement>('.colBtn').forEach((b) => b.classList.toggle('on', b.dataset.color === sel.color));
   document.querySelectorAll<HTMLElement>('[data-size]').forEach((b) => b.classList.toggle('on', b.dataset.size === sel.size));
 }
+const TOOL_HINT: Record<Tool, string> = {
+  gem: 'Gem: pinch a gem on the right, drop it on your face',
+  brush: 'Brush: point with one finger (or drag the mouse) over your face',
+  eraser: 'Eraser: pinch gems on your face to remove them',
+};
 function setTool(t: Tool) {
   tool = t;
+  if (phase === 'decorate') say(TOOL_HINT[t], 3500);
   document.querySelectorAll<HTMLElement>('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
-  show('brushOpts', t === 'brush');
 }
 
 // ---------------------------------------------------------------- gems
@@ -181,7 +195,7 @@ function gemAt(sx: number, sy: number): Gem | null {
   let bd = 1e9;
   for (const g of gems) {
     const [x, y] = gemScreen(g);
-    const r = Math.max(g.rel * stage.faceWidth * stage.pxScale * 0.5, 9) + 8;
+    const r = Math.max(g.rel * stage.faceWidth * stage.pxScale * 0.5, 12) + 10;
     const d = Math.hypot(x - sx, y - sy);
     if (d < r && d < bd) { bd = d; best = g; }
   }
@@ -211,58 +225,6 @@ function undo() {
 }
 
 // ---------------------------------------------------------------- brush
-function pointInPoly(x: number, y: number, p: [number, number][]) {
-  let inside = false;
-  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
-    if (p[i][1] > y !== p[j][1] > y && x < ((p[j][0] - p[i][0]) * (y - p[i][1])) / (p[j][1] - p[i][1]) + p[i][0]) inside = !inside;
-  }
-  return inside;
-}
-function pickShape(): Shape {
-  const r = Math.random();
-  if (r < 0.6) return 'round';
-  if (r < 0.8) return 'teardrop';
-  return sel.shape;
-}
-function stamp(sx: number, sy: number, shape: 'star' | 'heart') {
-  stage.screenToWorld(sx, sy, tmp);
-  const cx = tmp.x, cy = tmp.y;
-  const R = CONFIG.gems.stampRadius * stage.faceWidth;
-  const poly = shapeOutline(shape);
-  const sizes: number[] = [];
-  for (let i = 0; i < CONFIG.gems.stampCount; i++) {
-    const r = Math.random();
-    sizes.push((r < 0.12 ? rand(18, 23) : r < 0.4 ? rand(10, 13) : rand(5, 8)) / CONFIG.gems.refFaceWidth * stage.faceWidth);
-  }
-  sizes.sort((a, b) => b - a);
-  const placed: { x: number; y: number; s: number }[] = [];
-  const made: Gem[] = [];
-  for (const s of sizes) {
-    for (let t = 0; t < 40; t++) {
-      const ux = rand(-1, 1), uy = rand(-1, 1);
-      if (!pointInPoly(ux, uy, poly)) continue;
-      const x = cx + ux * R, y = cy + uy * R;
-      if (placed.some((p) => Math.hypot(p.x - x, p.y - y) < ((p.s + s) / 2) * 1.15)) continue;
-      const h = stage.hitFace(x, y);
-      if (!h) break;
-      if (total() + made.length >= CONFIG.gems.max) break;
-      const g = makeGem(pickShape(), 0, resolveColor(sel.color));
-      g.rel = s / stage.faceWidth;
-      g.mode = 'anchored';
-      g.tri = h.tri;
-      g.b = h.b;
-      made.push(g);
-      placed.push({ x, y, s });
-      break;
-    }
-  }
-  if (!made.length) { say('Aim at your face'); return; }
-  gems.push(...made);
-  const ids = new Set(made);
-  history.push(() => { gems = gems.filter((g) => !ids.has(g)); });
-  stage.burst(new THREE.Vector3(cx, cy, 0), 10, 0xffffff);
-  audio.sparkle();
-}
 function trailPoint(sx: number, sy: number) {
   stage.screenToWorld(sx, sy, tmp);
   const hit = stage.hitFace(tmp.x, tmp.y);
@@ -273,7 +235,7 @@ function trailPoint(sx: number, sy: number) {
   lastTrail = tmp.clone();
   const jx = tmp.x + rand(-1, 1) * spacing * 0.3, jy = tmp.y + rand(-1, 1) * spacing * 0.3;
   const h = stage.hitFace(jx, jy) ?? hit;
-  const g = makeGem(Math.random() < 0.8 ? 'round' : 'teardrop', rand(0, 1) < 0.2 ? sizePx('large') : rand(5, 11), resolveColor(sel.color));
+  const g = makeGem(Math.random() < 0.8 ? 'round' : 'teardrop', Math.random() < 0.2 ? sizePx('medium') : rand(5, 11), resolveColor(sel.color));
   g.mode = 'anchored';
   g.tri = h.tri;
   g.b = h.b;
@@ -292,15 +254,34 @@ function endStroke() {
 
 // ---------------------------------------------------------------- pointer logic (mouse + hand share this)
 function overUI(el: Element | null) {
-  return !!el?.closest('.panel, #lcd, button, .screen, #oops');
+  return !!el?.closest('.panel, #lcd, button, .screen');
+}
+/** Nearest button within a forgiving radius, so pinches don't need pixel accuracy. */
+function targetAt(x: number, y: number): Element | null {
+  const el = document.elementFromPoint(x, y);
+  if (el?.closest('button')) return el;
+  let best: Element | null = null;
+  let bd = 36;
+  document.querySelectorAll<HTMLElement>('#toolbar button, #tray button, .screen:not(.hidden) button').forEach((b) => {
+    if (b.offsetParent === null) return;
+    const r = b.getBoundingClientRect();
+    const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+    if (d < bd) { bd = d; best = b; }
+  });
+  return best ?? el;
 }
 function press(x: number, y: number, source: 'mouse' | 'hand') {
-  const el = document.elementFromPoint(x, y);
-  const gemBtn = el?.closest<HTMLElement>('[data-gem]');
+  const el = source === 'hand' ? targetAt(x, y) : document.elementFromPoint(x, y);
+  const colBtn = el?.closest<HTMLElement>('[data-color]');
+  if (colBtn) {
+    sel.color = colBtn.dataset.color!;
+    markTray();
+    say(COLORS[sel.color].label + ' selected', 1800);
+    return;
+  }
+  const gemBtn = el?.closest<HTMLElement>('[data-shape]');
   if (gemBtn) {
-    const [s, c] = gemBtn.dataset.gem!.split(':');
-    sel.shape = s as Shape;
-    sel.color = c;
+    sel.shape = gemBtn.dataset.shape as Shape;
     markTray();
     if (phase !== 'decorate' || tool === 'brush') return;
     if (tool === 'eraser') setTool('gem');
@@ -314,8 +295,10 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
   if (source === 'hand') {
     const b = el?.closest<HTMLElement>('button');
     if (b) { b.click(); return; }
+    const hv = document.elementFromPoint(x, y);
+    if (hv && overUI(hv)) return;
   }
-  if (phase !== 'decorate' || overUI(el)) return;
+  if (phase !== 'decorate' || overUI(document.elementFromPoint(x, y))) return;
   const hit = gemAt(x, y);
   if (tool === 'eraser') {
     erasing = true;
@@ -329,11 +312,9 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
     return;
   }
   if (tool === 'brush') {
-    if (brush === 'trail') {
       stroke = [];
       strokeSource = source;
       trailPoint(x, y);
-    } else stamp(x, y, brush);
   }
 }
 function move(x: number, y: number) {
@@ -366,7 +347,7 @@ addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
   pointer = { x: e.clientX, y: e.clientY, valid: true };
   const el = e.target as Element;
-  if (el.closest('button:not([data-gem])')) return; // native click handles it
+  if (el.closest('button:not([data-shape]):not([data-color])')) return; // native click handles it
   if (phase === 'decorate') press(e.clientX, e.clientY, 'mouse');
 });
 addEventListener('pointermove', (e) => {
@@ -384,32 +365,6 @@ addEventListener('keydown', (e) => {
   if (phase !== 'decorate') return;
   if (e.key.toLowerCase() === 'z') undo();
   if (e.key === 'Enter') finishDecorate();
-});
-
-// ---------------------------------------------------------------- snap
-let backupTimer = 0;
-function snapClear() {
-  if (!gems.length) return;
-  backup = gems;
-  falling = gems.map((g) => {
-    const c = { ...g, pos: new THREE.Vector3(), vel: new THREE.Vector3(rand(-120, 120), rand(60, 260), 0), life: 0, mode: 'falling' as const, lift: false };
-    if (g.mode === 'anchored') stage.anchorPos(g, 0, c.pos, tmpN);
-    else c.pos.copy(g.pos);
-    return c;
-  });
-  gems = [];
-  history.length = 0;
-  stage.burst(new THREE.Vector3(0, 0, 0), 20);
-  audio.sparkle();
-  show('oops', true);
-  clearTimeout(backupTimer);
-  backupTimer = window.setTimeout(() => { show('oops', false); backup = []; }, CONFIG.gestures.snapRestoreMs);
-}
-$('oops').addEventListener('click', () => {
-  gems = backup.concat(gems);
-  backup = [];
-  falling = [];
-  show('oops', false);
 });
 
 // ---------------------------------------------------------------- selfie flow
@@ -513,13 +468,6 @@ $('save').onclick = () => {
 
 // ---------------------------------------------------------------- toolbar wiring
 document.querySelectorAll<HTMLElement>('[data-tool]').forEach((b) => (b.onclick = () => setTool(b.dataset.tool as Tool)));
-document.querySelectorAll<HTMLElement>('[data-brush]').forEach(
-  (b) =>
-    (b.onclick = () => {
-      brush = b.dataset.brush as typeof brush;
-      document.querySelectorAll<HTMLElement>('[data-brush]').forEach((x) => x.classList.toggle('on', x === b));
-    }),
-);
 document.querySelectorAll<HTMLElement>('[data-size]').forEach(
   (b) => (b.onclick = () => { sel.size = b.dataset.size as SizeKey; markTray(); }),
 );
@@ -551,10 +499,15 @@ $('musicBtn').classList.toggle('off', !musicOn.checked);
 // ---------------------------------------------------------------- boot
 let handDriving = false;
 let wasPinch = false;
+let dwellEl: HTMLElement | null = null;
+let dwellStart = 0;
+let dwellDone: HTMLElement | null = null;
 let faceOK = false;
 let lastFaceT = 0;
 let lastVT = -1;
 let lastNow = performance.now();
+let fps = 30;
+let frameNo = 0;
 let checkOkSince = 0;
 let skipHand = false;
 let checkStart = 0;
@@ -601,28 +554,50 @@ $('start').onclick = async () => {
   requestAnimationFrame(frame);
 };
 
-function enterDecorate() {
+let guideSeen = false;
+try { guideSeen = !!sessionStorage.getItem('bb-guide'); } catch { /* ignore */ }
+function openGuide() {
+  setPhase('guide');
+}
+function closeGuide() {
+  guideSeen = true;
+  try { sessionStorage.setItem('bb-guide', '1'); } catch { /* ignore */ }
   setPhase('decorate');
   say('Pinch a gem, drag it onto your face, let go.', 4000);
+}
+function enterDecorate() {
+  if (guideSeen) closeGuide();
+  else openGuide();
+}
+$('guideOk').onclick = closeGuide;
+$('help').onclick = openGuide;
+function lightGuide(hs: ReturnType<HandGestures['update']>, now: number) {
+  const on: Record<string, boolean> = {
+    'gc-pinch': hs.pinching, 'gc-point': hs.pointing, 'gc-fist': hs.fist,
+    'gc-thumb': hs.thumbsUpProgress > 0,
+  };
+  for (const k in on) $(k).classList.toggle('live', on[k]);
 }
 
 function frame(now: number) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - lastNow) / 1000, 0.1);
   lastNow = now;
+  fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
 
   // tracking
   let handPresent = false;
   if (video.readyState >= 2 && video.currentTime !== lastVT) {
     lastVT = video.currentTime;
-    const r = tracker.detect(video, now);
+    const r = tracker.detect(video, now, ++frameNo % 2 === 0);
     if (r.face) {
       stage.setFace(r.face);
       lastFaceT = now;
     }
     const hs = gestures.update(r.hand, now);
     handPresent = hs.present;
-    if (phase === 'decorate' || phase === 'setup' || phase === 'result') handleHand(hs);
+    if (phase === 'decorate' || phase === 'setup' || phase === 'result' || phase === 'guide') handleHand(hs);
+    if (phase === 'guide') lightGuide(hs, now);
     else $('cursor').classList.add('hidden');
   }
   faceOK = now - lastFaceT < CONFIG.face.lostMs && lastFaceT > 0;
@@ -654,7 +629,7 @@ function frame(now: number) {
   // LCD
   if (phase === 'decorate') {
     let text = lcdOverride && now < lcdUntil ? lcdOverride : '';
-    if (!text) text = !faceOK ? 'Show your face' : !gestures.state.present ? 'Raise a hand · or use the mouse' : `${gems.length} gems`;
+    if (!text) text = !faceOK ? 'Show your face' : !gestures.state.present ? 'Raise a hand · or use the mouse' : `${gems.length} gems · ${Math.round(fps)} fps`;
     $('lcdText').textContent = text;
     const p = gestures.state.thumbsUpProgress;
     $('thumbBar').style.display = p > 0 ? 'block' : 'none';
@@ -665,7 +640,6 @@ function frame(now: number) {
   const list = drag ? gems.concat(falling, drag.gem) : gems.concat(falling);
   layer.update(list, stage);
   stage.render(dt);
-  drawPreview();
 }
 
 function handleHand(hs: ReturnType<HandGestures['update']>) {
@@ -688,16 +662,29 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
 
   // hover highlight
   document.querySelectorAll('.hover').forEach((e) => e.classList.remove('hover'));
-  document.elementFromPoint(px, py)?.closest('button')?.classList.add('hover');
+  targetAt(px, py)?.closest('button')?.classList.add('hover');
 
-  if (hs.pinching && !wasPinch) press(px, py, 'hand');
-  else if (hs.pinching) move(px, py);
+  // Dwell: hold the cursor over a button (no pinch needed) to press it.
+  const tgt = (targetAt(px, py)?.closest('button') as HTMLElement | null) ?? null;
+  if (tgt !== dwellEl) { dwellEl = tgt; dwellStart = performance.now(); }
+  if (dwellDone && tgt !== dwellDone) dwellDone = null;
+  let prog = 0;
+  if (tgt && !tgt.dataset.shape && !hs.pinching && tgt !== dwellDone) {
+    prog = Math.min(1, (performance.now() - dwellStart) / CONFIG.gestures.dwellMs);
+    if (prog >= 1) { dwellDone = tgt; prog = 0; press(px, py, 'hand'); }
+  }
+  cur.style.setProperty('--p', String(prog));
+
+  if (hs.pinching && !wasPinch) {
+    if (tgt) dwellDone = tgt; // a pinch-press must not be followed by a dwell-press
+    press(px, py, 'hand');
+  } else if (hs.pinching) move(px, py);
   else if (wasPinch) release();
   wasPinch = hs.pinching;
 
   if (phase !== 'decorate') return;
   // freehand trail while pointing
-  if (tool === 'brush' && brush === 'trail' && hs.pointing && !hs.pinching) {
+  if (tool === 'brush' && hs.pointing && !hs.pinching) {
     if (!stroke) { stroke = []; strokeSource = 'hand'; }
     if (strokeSource === 'hand') trailPoint(px, py);
   } else if (strokeSource === 'hand') endStroke();
@@ -705,27 +692,7 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   for (const ev of hs.events) {
     if (ev === 'undo') undo();
     else if (ev === 'done') finishDecorate();
-    else if (ev === 'snap') snapClear();
   }
-}
-
-function drawPreview() {
-  fxg.clearRect(0, 0, fx.width, fx.height);
-  if (phase !== 'decorate' || tool !== 'brush' || brush === 'trail' || !pointer.valid) return;
-  const r = stage.rect;
-  if (pointer.x < r.left || pointer.x > r.right || pointer.y < r.top || pointer.y > r.bottom) return;
-  const R = CONFIG.gems.stampRadius * stage.faceWidth * stage.pxScale * (fx.width / r.width);
-  const cx = (pointer.x - r.left) * (fx.width / r.width);
-  const cy = (pointer.y - r.top) * (fx.height / r.height);
-  fxg.beginPath();
-  shapeOutline(brush).forEach(([x, y], i) => (i ? fxg.lineTo(cx + x * R, cy - y * R) : fxg.moveTo(cx + x * R, cy - y * R)));
-  fxg.closePath();
-  fxg.setLineDash([8, 6]);
-  fxg.lineWidth = 3;
-  fxg.strokeStyle = '#fff';
-  fxg.shadowColor = '#ff2e93';
-  fxg.shadowBlur = 10;
-  fxg.stroke();
 }
 
 setPhase('landing');
