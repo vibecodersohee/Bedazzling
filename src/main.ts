@@ -218,6 +218,23 @@ function burstAt(g: Gem) {
   stage.burst(c, 6, g.color);
   audio.sparkle();
 }
+const COLOR_KEYS = Object.keys(COLORS);
+function cycleColor(d: number) {
+  const i = (COLOR_KEYS.indexOf(sel.color) + d + COLOR_KEYS.length) % COLOR_KEYS.length;
+  sel.color = COLOR_KEYS[i];
+  markTray();
+  say(COLORS[sel.color].label, 1500);
+  audio.sparkle();
+}
+function clearAll() {
+  if (drag || !gems.length) { say('Nothing to clear'); return; }
+  const old = gems;
+  gems = [];
+  stage.burst(new THREE.Vector3(0, 0, 0), 12);
+  audio.sparkle();
+  history.push(() => { gems = old.concat(gems); });
+  say('Cleared. Undo brings them back', 3500);
+}
 function undo() {
   const f = history.pop();
   if (f) f();
@@ -365,6 +382,8 @@ addEventListener('keydown', (e) => {
   if (phase !== 'decorate') return;
   if (e.key.toLowerCase() === 'z') undo();
   if (e.key === 'Enter') finishDecorate();
+  if (e.key === 'ArrowRight') cycleColor(1);
+  if (e.key === 'ArrowLeft') cycleColor(-1);
 });
 
 // ---------------------------------------------------------------- selfie flow
@@ -471,7 +490,15 @@ document.querySelectorAll<HTMLElement>('[data-tool]').forEach((b) => (b.onclick 
 document.querySelectorAll<HTMLElement>('[data-size]').forEach(
   (b) => (b.onclick = () => { sel.size = b.dataset.size as SizeKey; markTray(); }),
 );
+// brief "pressed" flash for any button activation (mouse or hand)
+document.addEventListener('click', (e) => {
+  const b = (e.target as Element).closest<HTMLElement>('.tool, .mini, .gel');
+  if (!b) return;
+  b.classList.add('pressed');
+  setTimeout(() => b.classList.remove('pressed'), 280);
+});
 $('undo').onclick = undo;
+$('clearAll').onclick = clearAll;
 $('done').onclick = finishDecorate;
 
 // ---------------------------------------------------------------- music UI
@@ -571,10 +598,12 @@ function enterDecorate() {
 }
 $('guideOk').onclick = closeGuide;
 $('help').onclick = openGuide;
+let swipeFlash = 0;
 function lightGuide(hs: ReturnType<HandGestures['update']>, now: number) {
+  if (hs.events.some((e) => e === 'swipeLeft' || e === 'swipeRight')) swipeFlash = now + 800;
   const on: Record<string, boolean> = {
     'gc-pinch': hs.pinching, 'gc-point': hs.pointing, 'gc-fist': hs.fist,
-    'gc-thumb': hs.thumbsUpProgress > 0,
+    'gc-thumb': hs.thumbsUpProgress > 0, 'gc-swipe': now < swipeFlash,
   };
   for (const k in on) $(k).classList.toggle('live', on[k]);
 }
@@ -692,6 +721,8 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   for (const ev of hs.events) {
     if (ev === 'undo') undo();
     else if (ev === 'done') finishDecorate();
+    else if (ev === 'swipeRight') cycleColor(1);
+    else if (ev === 'swipeLeft') cycleColor(-1);
   }
 }
 

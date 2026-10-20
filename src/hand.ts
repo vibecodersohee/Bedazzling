@@ -1,6 +1,6 @@
 import { CONFIG } from './config';
 
-export type HandEvent = 'undo' | 'done';
+export type HandEvent = 'undo' | 'done' | 'swipeLeft' | 'swipeRight';
 export interface HandState {
   present: boolean;
   /** Cursor in mirrored normalized image space (0..1). */
@@ -25,6 +25,8 @@ export class HandGestures {
   private thumbSince = 0;
   private thumbFired = false;
   private lastUndo = -1e9;
+  private trail: { t: number; x: number; y: number }[] = [];
+  private lastSwipe = -1e9;
   constructor(private aspect: number) {}
 
   private d(l: Float32Array, i: number, j: number) {
@@ -47,8 +49,6 @@ export class HandGestures {
       return s;
     }
     s.present = true;
-    s.x = 1 - (l[8 * 3] + l[4 * 3]) / 2;
-    s.y = (l[8 * 3 + 1] + l[4 * 3 + 1]) / 2;
 
     const size = Math.max(this.d(l, WRIST, 9), 1e-4);
     const ratio = (tip: number, mcp: number) => this.d(l, tip, WRIST) / Math.max(this.d(l, mcp, WRIST), 1e-4);
@@ -67,6 +67,11 @@ export class HandGestures {
       this.pinching = true;
     }
     s.pinching = this.pinching;
+
+    // Cursor: index fingertip, drifting to the thumb/index midpoint as a pinch closes (steadier grabbing).
+    const w = Math.min(1, Math.max(0, (pinchD - 0.2) / 0.3));
+    s.x = 1 - (l[8 * 3] * w + ((l[8 * 3] + l[4 * 3]) / 2) * (1 - w));
+    s.y = l[8 * 3 + 1] * w + ((l[8 * 3 + 1] + l[4 * 3 + 1]) / 2) * (1 - w);
 
     // Pointing: index out, others curled, held for the confirmation delay.
     const pointRaw = extended(idx) && curled(mid) && curled(ring) && curled(pinky) && !this.pinching;
@@ -105,6 +110,21 @@ export class HandGestures {
       s.thumbsUpProgress = 0;
     }
 
+
+    // Swipe: open flat hand sweeping sideways (left/right on screen, mirrored).
+    const open = extended(idx) && extended(mid) && extended(ring) && extended(pinky);
+    if (open && !this.pinching) {
+      this.trail.push({ t: now, x: 1 - l[9 * 3], y: l[9 * 3 + 1] });
+      while (this.trail.length && now - this.trail[0].t > G.swipeWindowMs) this.trail.shift();
+      const a = this.trail[0];
+      const b = this.trail[this.trail.length - 1];
+      const dx = b.x - a.x, dy = (b.y - a.y) / this.aspect * 1; // dy in width units
+      if (now - this.lastSwipe > G.swipeCooldownMs && Math.abs(dx) > G.swipeDistance && Math.abs(dx) > 2.5 * Math.abs(dy)) {
+        this.lastSwipe = now;
+        this.trail = [];
+        s.events.push(dx > 0 ? 'swipeRight' : 'swipeLeft');
+      }
+    } else this.trail = [];
     return s;
   }
 }

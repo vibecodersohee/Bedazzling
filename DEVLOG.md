@@ -2,6 +2,14 @@
 
 Newest first. One entry per commit (what changed, why, what to check next).
 
+## 2026-10-19 · Clear all, swipe colors, pressed states, fingertip cursor
+- **Clear all** button on the toolbar (undoable) replaces the removed finger snap.
+- **Swipe to change color**: open flat hand sweeping left/right cycles colors (arrow keys on keyboard). New Swipe card in the gesture guide. Tunables: `swipeDistance`, `swipeWindowMs`, `swipeCooldownMs`.
+- **Pressed look** for selected tools, sizes, colors, shapes; action buttons flash pressed when fired.
+- **Cursor** is the index fingertip when pointing, easing to the thumb/index midpoint while pinching.
+- PRD gesture table and toolbar description updated.
+- **Check next**: accidental swipes when moving an open hand fast; toolbar height on short screens.
+
 ## 2026-10-15 · Brush trail only, bigger sizes, less lag, easier buttons
 - **Removed** star/heart stamps. Brush is freehand trail only (point or drag the mouse). One stroke = one undo step.
 - **Sizes**: S 7 px (same), M 20 px (old L), L 46 px (hero gem like the reference heart).

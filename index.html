@@ -26,12 +26,13 @@
       <button class="tool" data-tool="brush" title="Brush">✦<span>Brush</span></button>
       <button class="tool" data-tool="eraser" title="Eraser">✕<span>Erase</span></button>
       <button class="tool" id="undo" title="Undo (Z)">↺<span>Undo</span></button>
+      <button class="tool" id="clearAll" title="Clear all gems">🗑<span>Clear</span></button>
       <button class="tool" id="help" title="Gesture guide">?<span>Help</span></button>
       <button class="tool done" id="done" title="Done (Enter)">✓<span>Done</span></button>
     </aside>
 
     <aside id="tray" class="panel hidden">
-      <div class="lab">1 · Pick a color</div>
+      <div class="lab">1 · Color (swipe hand ↔)</div>
       <div id="colorGrid"></div>
       <div class="lab">Size</div>
       <div class="sizes">
@@ -73,7 +74,8 @@
       <h2>Gesture guide</h2>
       <p class="fine">Your hand lights up the matching card. Try them! (Mouse works too.)</p>
       <div class="cards">
-        <div class="card" id="gc-tools"><i>🎨</i><b>Tools &amp; colors</b><p>Pinch a tool on the left (Gem, Brush, Erase) and a color or size on the right.</p></div>
+        <div class="card" id="gc-swipe"><i>👋</i><b>Swipe</b><p>Open flat hand, sweep left or right to change color. (Arrow keys on keyboard.)</p></div>
+        <div class="card" id="gc-tools"><i>🎨</i><b>Tools</b><p>Hold over or pinch a tool on the left (Gem, Brush, Erase, Clear) and a size on the right.</p></div>
         <div class="card" id="gc-pinch"><i>🤏</i><b>Pinch</b><p>Thumb + index together over a gem, drag onto your face, open to drop. Also presses buttons (or just hold over a button for a second).</p></div>
         <div class="card" id="gc-point"><i>☝️</i><b>Point</b><p>Index finger only. With the Brush tool, gems trail along your fingertip.</p></div>
         <div class="card" id="gc-fist"><i>✊</i><b>Fist</b><p>Hold half a second to undo.</p></div>

@@ -13,6 +13,9 @@ export const CONFIG = {
   gestures: {
     pinchEngage: 0.36, // thumb-index distance / hand size
     pinchRelease: 0.58,
+    swipeDistance: 0.22, // fraction of screen width, open hand
+    swipeWindowMs: 350,
+    swipeCooldownMs: 700,
     dwellMs: 900, // hover over a button this long to press it without pinching
     modeConfirmMs: 150,
     fistHoldMs: 500,

@@ -46,7 +46,7 @@ Gen-Z users on a laptop or desktop with a webcam who enjoy beauty and nostalgia 
 | 2 cut layout | Two photos stacked vertically |
 | Backgrounds | User picks a background for the photo (like a collage board with stamp frames, bows, butterflies) |
 | Finish gesture | Thumbs up held for 1 second, with a Done button as fallback |
-| Fun feature | None for now. Finger snap was removed in v0.3 because it was confusing next to pinch |
+| Fun feature | None for now. Finger snap was removed in v0.3 because it was confusing next to pinch. A Clear all button replaced it |
 | Onboarding | Gesture guide screen on first Decorate, reopen with the Help button (v0.3) |
 | Pressing buttons by hand | Pinch, or hold the cursor over a button about 1 second (dwell) (v0.3) |
 | Music | 3 Y2K style background tracks, user can turn on and off. v0.3 uses synthesized loops, no licensed files |
@@ -90,7 +90,7 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 ### 7.1 Layout
 - The live camera fills the screen and is mirrored.
 - Gem tray sits on the right: pick a color, pick a size, then pinch one of four big shape buttons to take a gem.
-- A tool bar on the left holds Gem, Brush, Eraser, Undo, Help and Done. Buttons are large enough to hit with a pinch.
+- A tool bar on the left holds Gem, Brush, Eraser, Undo, Clear all, Help and Done. Clear all is undoable. Buttons are large enough to hit with a pinch.
 - A gesture guide shows on the first visit to Decorate. Cards light up when the matching gesture is detected.
 - A small status area shows tracking state and short messages in the LCD style (see section 9).
 - The camera area stays clean of decoration so the face is the hero.
@@ -106,6 +106,7 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 | Move a placed gem | Pinch the gem on the face, drag, release | |
 | Remove a placed gem | Pinch it, drag it off the face, release | Gem pops with a small sparkle |
 | Freehand trail | With Brush active, point with index finger only (other fingers curled) and move over the face | See 7.3 |
+| Change color | Open flat hand, sweep left or right (arrow keys on keyboard) | Left to right = next color, right to left = previous. Swatches can still be pressed |
 | Undo | Closed fist held for half a second, or the Undo button | Undoes the last placement or stroke |
 | Finish | Thumbs up held for 1 second, or Done button | Show a progress ring while holding |
 
@@ -232,7 +233,6 @@ Pink is the hero. Silver, white and small hits of icy blue or lilac add sparkle.
 
 - 4 cut photobooth strip
 - Stamp shapes (star, heart, butterfly) and more gem shapes (bow, sparkle)
-- Clear all button (replaces the removed finger snap)
 - Theme packs for gems and backgrounds
 - Share sheet or link
 - Mobile touch version
