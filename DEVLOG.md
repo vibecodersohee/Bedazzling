@@ -3,6 +3,7 @@
 Newest first. One entry per commit (what changed, why, what to check next).
 
 ## 2026-10-22 · Figma UI, 1-cut frames, gesture tuning
+- Removed the three reference `Selfie time - Frame*.png` exports from the repo root (app frames live in `public/assets/frames/`).
 - **Figma design implemented** (design system + screens): glossy gel buttons with hover/pressed/disabled states, pixel-icon pattern backgrounds, pixelarticons icons, Tools / Colors / Gems panels, tooltip, music button. UI is authored at 1920x1080 and scaled to fit; camera now covers the full window.
 - **Selfie**: 1 cut only. Three photo frames (phone, TV, camera) from transparent-window PNGs in `public/assets/frames/`, selfie mapped onto the window box (`scripts/make-frames.py`). Selfie time screen picks a frame, then countdown and result.
 - **Gems panel** bottom center; shapes are circle, sparkle, heart, star; 8 design-system colors in a scrolling list with chevrons. Gems panel hides while the Brush tool is active.
