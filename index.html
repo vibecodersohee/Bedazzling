@@ -6,113 +6,115 @@
     <title>Bedazzle Booth</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Doto:wght@900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" />
   </head>
   <body>
     <video id="video" playsinline muted></video>
 
-    <div id="stage">
-      <canvas id="gl"></canvas>
-      <canvas id="fx"></canvas>
-      <div id="cropmask"></div>
+    <!-- Everything lives in a 1920x1080 design space that is scaled to fit the window -->
+    <div id="app">
+      <div id="stage">
+        <canvas id="gl"></canvas>
+        <div id="cropmask"></div>
+        <div id="flash"></div>
+      </div>
       <div id="countdown"></div>
-      <div id="flash"></div>
+
+      <!-- Decorate HUD -->
+      <div id="hud" class="hidden">
+        <button id="help" class="btn pill pink" title="Gesture guide"><i data-icon="circle-question"></i><span>Help</span></button>
+        <div id="lcd" class="lcd"><span id="lcdText"></span><div id="thumbBar"><i></i></div></div>
+
+        <aside id="toolbar" class="panel tools">
+          <div class="plabel">Tools</div>
+          <button class="btn sq pink on" data-tool="gem"><i data-icon="diamond-gem"></i><span>Gems</span></button>
+          <button class="btn sq pink" data-tool="brush"><i data-icon="brush"></i><span>Brush</span></button>
+          <button class="btn sq pink" data-tool="eraser"><i data-icon="eraser"></i><span>Erase</span></button>
+          <button class="btn sq pink" id="undo"><i data-icon="undo"></i><span>Undo</span></button>
+          <button class="btn sq pink" id="clearAll"><i data-icon="trash"></i><span>Clear</span></button>
+        </aside>
+
+        <aside id="colors" class="panel colors">
+          <div class="plabel">Colors</div>
+          <button class="btn pill pink chev" id="colUp" aria-label="Previous colors"><i data-icon="chevron-up"></i></button>
+          <div id="colorList"></div>
+          <button class="btn pill pink chev" id="colDown" aria-label="More colors"><i data-icon="chevron-down"></i></button>
+        </aside>
+
+        <aside id="gemPanel" class="panel gems">
+          <div class="plabel">Gems</div>
+          <div class="sizes">
+            <button class="btn pill pink" data-size="small">Small</button>
+            <button class="btn pill pink on" data-size="medium">Medium</button>
+            <button class="btn pill pink" data-size="large">Large</button>
+          </div>
+          <div id="shapeGrid"></div>
+        </aside>
+
+        <button id="done" class="btn sq grey"><i data-icon="camera"></i><span>Selfie</span></button>
+      </div>
+
+      <button id="musicBtn" class="btn pill pink hidden" title="Music"><i data-icon="volume-2"></i><span>On</span></button>
+
+      <!-- Screens -->
+      <section id="landing" class="screen pink-bg">
+        <h1>Bedazzle<i data-icon="diamond-gem"></i><br />Booth<i data-icon="sparkle"></i></h1>
+        <button id="start" class="btn bar pink">Start</button>
+        <p class="fine">Everything runs in your browser. No video or photos leave your device.</p>
+        <div id="musicSetting" class="lcd music">
+          <label class="check"><input type="checkbox" id="musicOn" /><i class="off" data-icon="checkbox"></i><i class="on" data-icon="checkbox-on"></i>Music</label>
+          <div class="select"><select id="trackSel"></select><i data-icon="chevron-down"></i></div>
+        </div>
+      </section>
+
+      <section id="check" class="screen clear hidden">
+        <h2 id="checkTitle" class="pixel-title">Loading trackers…</h2>
+        <div class="lcd status"><span id="chkFace">Face <b>…</b></span><span id="chkHand">Hand <b>…</b></span></div>
+        <p class="fine" id="checkHint">Show your face, then raise a hand.</p>
+        <button id="skipHand" class="btn bar grey hidden">Use mouse instead</button>
+      </section>
+
+      <section id="guide" class="screen pink-bg hidden">
+        <h2 class="pixel-title dark">Gesture guide</h2>
+        <p class="sub">Your hand lights up the matching card. Try them! (Mouse works too.)</p>
+        <div class="cards">
+          <div class="card" id="gc-tool"><i>🤏</i><b>Select a tool</b><ul><li>Pinch a button / hover for 1 sec</li></ul></div>
+          <div class="card" id="gc-pinch"><i>🤏</i><b>Place a gem</b><ul><li>Pinch → drag → release</li><li>Remove a gem: Pinch it and drag it off your face</li></ul></div>
+          <div class="card" id="gc-point"><i>☝️</i><b>Draw with gems</b><ul><li>Point + move</li></ul></div>
+          <div class="card" id="gc-swipe"><i>👋</i><b>Change color</b><ul><li>Open hand + swipe ↑ ↓</li></ul></div>
+          <div class="card" id="gc-fist"><i>✊</i><b>Undo</b><ul><li>Make a fist and hold 0.5 sec</li></ul></div>
+          <div class="card" id="gc-thumb"><i>👍</i><b>Continue to selfie</b><ul><li>Thumbs up and hold 1 sec</li></ul></div>
+        </div>
+        <ul class="mouse"><li>Mouse: drag to place, right-click removes, Z undoes, Enter finishes</li></ul>
+        <button id="guideOk" class="btn bar pink wide">Got it</button>
+      </section>
+
+      <section id="setup" class="screen pink-bg hidden">
+        <h2 class="pixel-title dark">Selfie time</h2>
+        <div class="row" id="framePick"></div>
+        <div class="row">
+          <button id="setupBack" class="btn sq grey small">Back</button>
+          <button id="takePhoto" class="btn bar pink" disabled>Take photo</button>
+        </div>
+      </section>
+
+      <section id="result" class="screen pink-bg hidden">
+        <img id="resultImg" alt="Your photo" />
+        <div class="row">
+          <button id="save" class="btn bar pink">Save PNG</button>
+          <button id="retake" class="btn bar grey">Retake</button>
+          <button id="backDecor" class="btn bar grey">Back to decorate</button>
+        </div>
+      </section>
+
+      <section id="error" class="screen dark-bg hidden">
+        <h2 id="errTitle" class="pixel-title">Something went wrong</h2>
+        <p id="errBody" class="fine"></p>
+        <button class="btn bar pink" onclick="location.reload()">Try again</button>
+      </section>
     </div>
 
-    <!-- Decorate UI -->
-    <aside id="toolbar" class="panel hidden">
-      <div class="lab">Tools</div>
-      <button class="tool on" data-tool="gem" title="Gem">◆<span>Gem</span></button>
-      <button class="tool" data-tool="brush" title="Brush">✦<span>Brush</span></button>
-      <button class="tool" data-tool="eraser" title="Eraser">✕<span>Erase</span></button>
-      <button class="tool" id="undo" title="Undo (Z)">↺<span>Undo</span></button>
-      <button class="tool" id="clearAll" title="Clear all gems">🗑<span>Clear</span></button>
-      <button class="tool" id="help" title="Gesture guide">?<span>Help</span></button>
-      <button class="tool done" id="done" title="Done (Enter)">✓<span>Done</span></button>
-    </aside>
-
-    <aside id="tray" class="panel hidden">
-      <div class="lab">1 · Color (swipe hand ↔)</div>
-      <div id="colorGrid"></div>
-      <div class="lab">Size</div>
-      <div class="sizes">
-        <button class="mini" data-size="small">S</button>
-        <button class="mini on" data-size="medium">M</button>
-        <button class="mini" data-size="large">L</button>
-      </div>
-      <div class="lab">2 · Pinch a gem, drop it on your face</div>
-      <div id="shapeGrid"></div>
-    </aside>
-
-    <div id="lcd" class="lcd hidden"><span id="lcdText"></span><div id="thumbBar"><i></i></div></div>
-    <button id="musicBtn" class="round" title="Music">♪</button>
     <div id="cursor" class="hidden"></div>
-
-    <!-- Screens -->
-    <section id="landing" class="screen">
-      <h1>Bedazzle<br />Booth</h1>
-      <p class="tag">Pinch. Drag. Sparkle. Then take the selfie.</p>
-      <div class="musicPick lcd">
-        <label><input type="checkbox" id="musicOn" /> Music</label>
-        <select id="trackSel"></select>
-      </div>
-      <button id="start" class="gel big">Start</button>
-      <p class="fine">Everything runs in your browser. No video or photos leave your device.</p>
-    </section>
-
-    <section id="check" class="screen hidden">
-      <h2 id="checkTitle">Loading trackers…</h2>
-      <div class="lcd checks">
-        <div id="chkFace" class="chk">Face <b>…</b></div>
-        <div id="chkHand" class="chk">Hand <b>…</b></div>
-      </div>
-      <p class="fine" id="checkHint">Show your face, then raise a hand.</p>
-      <button id="skipHand" class="gel hidden">Use mouse instead</button>
-    </section>
-
-    <section id="guide" class="screen hidden">
-      <h2>Gesture guide</h2>
-      <p class="fine">Your hand lights up the matching card. Try them! (Mouse works too.)</p>
-      <div class="cards">
-        <div class="card" id="gc-swipe"><i>👋</i><b>Swipe</b><p>Open flat hand, sweep left or right to change color. (Arrow keys on keyboard.)</p></div>
-        <div class="card" id="gc-tools"><i>🎨</i><b>Tools</b><p>Hold over or pinch a tool on the left (Gem, Brush, Erase, Clear) and a size on the right.</p></div>
-        <div class="card" id="gc-pinch"><i>🤏</i><b>Pinch</b><p>Thumb + index together over a gem, drag onto your face, open to drop. Also presses buttons (or just hold over a button for a second).</p></div>
-        <div class="card" id="gc-point"><i>☝️</i><b>Point</b><p>Index finger only. With the Brush tool, gems trail along your fingertip.</p></div>
-        <div class="card" id="gc-fist"><i>✊</i><b>Fist</b><p>Hold half a second to undo.</p></div>
-        <div class="card" id="gc-thumb"><i>👍</i><b>Thumbs up</b><p>Hold one second to finish and take your selfie.</p></div>
-      </div>
-      <p class="fine">Tip: pinch a gem on your face and drag it off to remove it. Mouse: drag to place, right-click removes, Z undoes, Enter finishes.</p>
-      <button id="guideOk" class="gel big">Got it</button>
-    </section>
-
-    <section id="setup" class="screen hidden">
-      <h2>Selfie time</h2>
-      <div class="row" id="layoutPick"></div>
-      <div class="row" id="bgPick"></div>
-      <div class="row">
-        <button id="setupBack" class="gel">Back</button>
-        <button id="takePhoto" class="gel big">Take photo</button>
-      </div>
-    </section>
-
-    <section id="result" class="screen hidden">
-      <img id="resultImg" alt="Your photo" />
-      <div class="row">
-        <button id="save" class="gel big">Save PNG</button>
-        <button id="retake" class="gel">Retake</button>
-        <button id="retake1" class="gel hidden">Retake cut 1</button>
-        <button id="retake2" class="gel hidden">Retake cut 2</button>
-        <button id="backDecor" class="gel">Back to decorate</button>
-        <button id="startOver" class="gel">Start over</button>
-      </div>
-    </section>
-
-    <section id="error" class="screen hidden">
-      <h2 id="errTitle">Something went wrong</h2>
-      <p id="errBody"></p>
-      <button class="gel" onclick="location.reload()">Try again</button>
-    </section>
-
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

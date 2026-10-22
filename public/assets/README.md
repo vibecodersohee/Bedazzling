@@ -1,14 +1,11 @@
 # Assets
 
-Everything here is a **placeholder**. Swap files and edit `manifest.json`, no code changes needed.
+- `frames/*.png`: 1080 x 1350 PNG with a **transparent window** where the selfie shows through.
+  The selfie is drawn underneath, so the frame art covers its edges.
+- `manifest.json`: one entry per frame: `id`, `name` (button label), `file`, and `quad`,
+  the window corners [top-left, top-right, bottom-right, bottom-left] in canvas px.
+  The selfie is rotated/cropped to fit the quad, so tilted windows work.
+- `pattern.svg`: pixel icon background used on the pink screens (made by `scripts/make-pattern.mjs`).
 
-- `backgrounds/`: one image per layout. 1 cut = **1080 x 1350**, 2 cuts = **1080 x 1920**. PNG (transparency OK) or SVG.
-- `stickers/`: any size; positioned and sized in the manifest (canvas px, optional rotation).
-- `manifest.json`
-  - `backgrounds[].files`: image per layout key ("1", "2")
-  - `backgrounds[].windows`: where the selfie shows through, per layout (list of {x,y,w,h}). Any aspect works; the photo is cropped to fit.
-  - `backgrounds[].thumb`: picker thumbnail
-  - `stickers[]`: file, layout, backgrounds (ids, empty = all), x, y, w, h, rotate
-
-Stickers are drawn above the photo, so keep them away from the window.
-Add a new background = one new entry in `backgrounds`.
+Swap a frame by replacing its PNG and updating `quad` (run `python3 scripts/make-frames.py` to detect it
+from the transparent area). Add a frame = one new entry.

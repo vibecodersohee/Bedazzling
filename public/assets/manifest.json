@@ -1,175 +1,77 @@
 {
-  "layouts": {
-    "1": {
-      "width": 1080,
-      "height": 1350,
-      "label": "1 cut"
-    },
-    "2": {
-      "width": 1080,
-      "height": 1920,
-      "label": "2 cuts"
-    }
+  "canvas": {
+    "width": 1080,
+    "height": 1350
   },
-  "backgrounds": [
+  "frames": [
     {
-      "id": "pearl",
-      "name": "Pearl Pink",
-      "thumb": "backgrounds/pearl-thumb.svg",
-      "files": {
-        "1": "backgrounds/pearl-1.svg",
-        "2": "backgrounds/pearl-2.svg"
-      },
-      "windows": {
-        "1": [
-          {
-            "x": 90,
-            "y": 90,
-            "w": 900,
-            "h": 1125
-          }
+      "id": "phone",
+      "name": "Frame 1",
+      "file": "frames/phone.png",
+      "quad": [
+        [
+          282,
+          277
         ],
-        "2": [
-          {
-            "x": 140,
-            "y": 50,
-            "w": 800,
-            "h": 850
-          },
-          {
-            "x": 140,
-            "y": 940,
-            "w": 800,
-            "h": 850
-          }
-        ]
-      }
-    },
-    {
-      "id": "tile",
-      "name": "Iridescent Tile",
-      "thumb": "backgrounds/tile-thumb.svg",
-      "files": {
-        "1": "backgrounds/tile-1.svg",
-        "2": "backgrounds/tile-2.svg"
-      },
-      "windows": {
-        "1": [
-          {
-            "x": 90,
-            "y": 90,
-            "w": 900,
-            "h": 1125
-          }
+        [
+          663,
+          190
         ],
-        "2": [
-          {
-            "x": 140,
-            "y": 50,
-            "w": 800,
-            "h": 850
-          },
-          {
-            "x": 140,
-            "y": 940,
-            "w": 800,
-            "h": 850
-          }
-        ]
-      }
-    },
-    {
-      "id": "stamp",
-      "name": "Stamp Frame",
-      "thumb": "backgrounds/stamp-thumb.svg",
-      "files": {
-        "1": "backgrounds/stamp-1.svg",
-        "2": "backgrounds/stamp-2.svg"
-      },
-      "windows": {
-        "1": [
-          {
-            "x": 90,
-            "y": 90,
-            "w": 900,
-            "h": 1125
-          }
+        [
+          747,
+          559
         ],
-        "2": [
-          {
-            "x": 140,
-            "y": 50,
-            "w": 800,
-            "h": 850
-          },
-          {
-            "x": 140,
-            "y": 940,
-            "w": 800,
-            "h": 850
-          }
+        [
+          366,
+          645
         ]
-      }
-    }
-  ],
-  "stickers": [
-    {
-      "file": "stickers/bow.svg",
-      "layout": "1",
-      "backgrounds": [],
-      "x": 20,
-      "y": 20,
-      "w": 140,
-      "h": 105,
-      "rotate": -15
+      ]
     },
     {
-      "file": "stickers/butterfly.svg",
-      "layout": "1",
-      "backgrounds": [],
-      "x": 900,
-      "y": 1225,
-      "w": 130,
-      "h": 110,
-      "rotate": 12
+      "id": "tv",
+      "name": "Frame 2",
+      "file": "frames/tv.png",
+      "quad": [
+        [
+          163,
+          243
+        ],
+        [
+          920,
+          242
+        ],
+        [
+          920,
+          874
+        ],
+        [
+          163,
+          875
+        ]
+      ]
     },
     {
-      "file": "stickers/bubble.svg",
-      "layout": "1",
-      "backgrounds": [],
-      "x": 60,
-      "y": 1230,
-      "w": 90,
-      "h": 90
-    },
-    {
-      "file": "stickers/bow.svg",
-      "layout": "2",
-      "backgrounds": [],
-      "x": 20,
-      "y": 10,
-      "w": 140,
-      "h": 105,
-      "rotate": -15
-    },
-    {
-      "file": "stickers/butterfly.svg",
-      "layout": "2",
-      "backgrounds": [],
-      "x": 920,
-      "y": 1800,
-      "w": 130,
-      "h": 110,
-      "rotate": 12
-    },
-    {
-      "file": "stickers/bubble.svg",
-      "layout": "2",
-      "backgrounds": [],
-      "x": 40,
-      "y": 1800,
-      "w": 90,
-      "h": 90
+      "id": "camera",
+      "name": "Frame 3",
+      "file": "frames/camera.png",
+      "quad": [
+        [
+          126,
+          524
+        ],
+        [
+          708,
+          458
+        ],
+        [
+          755,
+          873
+        ],
+        [
+          172,
+          939
+        ]
+      ]
     }
   ]
 }

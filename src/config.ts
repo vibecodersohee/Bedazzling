@@ -11,12 +11,14 @@ export const CONFIG = {
     hand: { minCutoff: 1.5, beta: 12 },
   },
   gestures: {
-    pinchEngage: 0.36, // thumb-index distance / hand size
-    pinchRelease: 0.58,
-    swipeDistance: 0.22, // fraction of screen width, open hand
-    swipeWindowMs: 350,
-    swipeCooldownMs: 700,
-    dwellMs: 900, // hover over a button this long to press it without pinching
+    pinchEngage: 0.42, // thumb-index distance / hand size
+    pinchRelease: 0.62,
+    swipeDistance: 0.15, // fraction of screen height, open hand
+    swipeWindowMs: 500,
+    swipeCooldownMs: 500,
+    swipeOpenRatio: 1.35, // fingertip/knuckle distance from wrist to count a finger as open
+    swipeStraight: 1.6, // how much more vertical than horizontal the sweep must be
+    dwellMs: 2000, // hover over a button this long to press it without pinching
     modeConfirmMs: 150,
     fistHoldMs: 500,
     thumbsUpHoldMs: 1000,

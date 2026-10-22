@@ -3,24 +3,52 @@ import * as THREE from 'three';
 import { CONFIG } from './config';
 import { Tracker } from './tracking';
 import { Stage } from './stage';
-import { COLORS, GemLayer, SHAPES, Shape, Gem, makeGem, resolveColor, shapeOutline, SizeKey } from './gems';
+import { COLORS, GemLayer, SHAPES, Shape, Gem, makeGem, resolveColor, SizeKey } from './gems';
 import { HandGestures } from './hand';
 import { Audio, TRACKS } from './audio';
-import { Background, LayoutKey, Manifest, assetUrl, composeStrip, cropToAspect, loadManifest } from './compose';
+import { Frame, Manifest, composeFrame, cropToAspect, loadManifest, windowAspect } from './compose';
+import iconUndo from 'pixelarticons/svg/undo.svg?raw';
+import iconHelp from 'pixelarticons/svg/circle-question.svg?raw';
+import iconTrash from 'pixelarticons/svg/trash.svg?raw';
+import iconEraser from 'pixelarticons/svg/eraser.svg?raw';
+import iconBrush from 'pixelarticons/svg/brush.svg?raw';
+import iconGem from 'pixelarticons/svg/diamond-gem.svg?raw';
+import iconVolOn from 'pixelarticons/svg/volume-2.svg?raw';
+import iconVolOff from 'pixelarticons/svg/volume-x.svg?raw';
+import iconUp from 'pixelarticons/svg/chevron-up.svg?raw';
+import iconDown from 'pixelarticons/svg/chevron-down.svg?raw';
+import iconCheckbox from 'pixelarticons/svg/checkbox.svg?raw';
+import iconCheckboxOn from 'pixelarticons/svg/checkbox-on.svg?raw';
+import iconCamera from 'pixelarticons/svg/camera.svg?raw';
+import iconHeart from 'pixelarticons/svg/heart.svg?raw';
+import iconCircle from 'pixelarticons/svg/circle.svg?raw';
+import iconStar from 'pixelarticons/svg/star.svg?raw';
+import iconSparkle from 'pixelarticons/svg/sparkle.svg?raw';
+
+const ICONS: Record<string, string> = {
+  undo: iconUndo, 'circle-question': iconHelp, trash: iconTrash, eraser: iconEraser, brush: iconBrush, 'diamond-gem': iconGem,
+  'volume-2': iconVolOn, 'volume-x': iconVolOff, 'chevron-up': iconUp, 'chevron-down': iconDown, checkbox: iconCheckbox,
+  'checkbox-on': iconCheckboxOn, camera: iconCamera, heart: iconHeart, circle: iconCircle, star: iconStar, sparkle: iconSparkle,
+};
+function injectIcons(root: ParentNode = document) {
+  root.querySelectorAll<HTMLElement>('[data-icon]').forEach((el) => {
+    el.innerHTML = ICONS[el.dataset.icon!] ?? '';
+  });
+}
+injectIcons();
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>('video');
+const appEl = $('app');
 const stageEl = $('stage');
 const glCanvas = $<HTMLCanvasElement>('gl');
-const fx = $<HTMLCanvasElement>('fx');
-const fxg = fx.getContext('2d')!;
 const audio = new Audio();
 
 type Phase = 'landing' | 'check' | 'guide' | 'decorate' | 'setup' | 'capture' | 'result' | 'error';
 type Tool = 'gem' | 'brush' | 'eraser';
 let phase: Phase = 'landing';
 let tool: Tool = 'gem';
-const sel = { shape: 'round' as Shape, color: 'hot', size: 'medium' as SizeKey };
+const sel = { shape: 'round' as Shape, color: 'pink', size: 'medium' as SizeKey };
 
 let stage: Stage;
 let layer: GemLayer;
@@ -63,102 +91,105 @@ function showError(title: string, body: string) {
 
 function setPhase(p: Phase) {
   phase = p;
-  const dec = p === 'decorate';
   show('landing', p === 'landing');
   show('check', p === 'check');
   show('guide', p === 'guide');
   show('setup', p === 'setup');
   show('result', p === 'result');
   show('error', p === 'error');
-  show('toolbar', dec);
-  show('tray', dec);
-  show('lcd', dec || p === 'check');
-  $('check').classList.toggle('clear', true);
-  if (p === 'capture') say('', 0);
+  show('hud', p === 'decorate');
+  if (p === 'decorate') updateChevrons();
+  show('musicBtn', p !== 'landing' && p !== 'capture' && p !== 'error');
   $('cropmask').style.display = p === 'capture' ? 'block' : 'none';
+  if (p !== 'capture') $('countdown').textContent = '';
 }
 
-// ---------------------------------------------------------------- layout
+// ---------------------------------------------------------------- layout (1920x1080 design space, scaled to fit)
 function layout() {
-  const s = Math.min(innerWidth / VW, innerHeight / VH);
-  stageEl.style.width = VW * s + 'px';
-  stageEl.style.height = VH * s + 'px';
-  fx.width = Math.round(VW * s);
-  fx.height = Math.round(VH * s);
+  // UI is authored at 1920x1080 and scaled to fit; the app box then grows to fill the whole window.
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  const aw = innerWidth / s, ah = innerHeight / s;
+  appEl.style.setProperty('--s', String(s));
+  appEl.style.width = aw + 'px';
+  appEl.style.height = ah + 'px';
+  // camera covers the whole screen (edges that don't fit are cropped)
+  const f = Math.max(aw / VW, ah / VH);
+  stageEl.style.width = VW * f + 'px';
+  stageEl.style.height = VH * f + 'px';
+  stageEl.style.left = (aw - VW * f) / 2 + 'px';
+  stageEl.style.top = (ah - VH * f) / 2 + 'px';
   stage?.updateRect();
   if (phase === 'capture') placeCropMask();
 }
 addEventListener('resize', layout);
 
 function placeCropMask() {
-  const w = currentWindows()[0];
-  const a = w.w / w.h;
-  const r = stage.rect;
-  let cw = r.width, ch = r.height;
-  if (r.width / r.height > a) cw = r.height * a;
-  else ch = r.width / a;
+  if (!selFrame) return;
+  const a = windowAspect(selFrame);
+  const W = stageEl.offsetWidth, H = stageEl.offsetHeight;
+  let cw = W, ch = H;
+  if (W / H > a) cw = H * a;
+  else ch = W / a;
   const m = $('cropmask');
   m.style.width = cw + 'px';
   m.style.height = ch + 'px';
-  m.style.left = (r.width - cw) / 2 + 'px';
-  m.style.top = (r.height - ch) / 2 + 'px';
+  m.style.left = (W - cw) / 2 + 'px';
+  m.style.top = (H - ch) / 2 + 'px';
 }
 
 // ---------------------------------------------------------------- tray UI
-function gemSvg(shape: Shape, colorKey: string, idx: number): string {
-  const hex = COLORS[colorKey].hex;
-  const css = '#' + hex.toString(16).padStart(6, '0');
-  const stops =
-    colorKey === 'rainbow'
-      ? '<stop offset="0" stop-color="#ff6ec7"/><stop offset=".35" stop-color="#6bbcff"/><stop offset=".7" stop-color="#ffcf4d"/><stop offset="1" stop-color="#b98aff"/>'
-      : `<stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="${css}"/><stop offset="1" stop-color="${css}" stop-opacity=".7"/>`;
-  const id = 'g' + idx;
-  const poly = (pts: [number, number][], dy: number) => pts.map(([x, y]) => `${(x * 17 + 20).toFixed(1)},${(dy - y * 17).toFixed(1)}`).join(' ');
-  let body = '';
-  if (shape === 'round') body = '<circle cx="20" cy="20" r="14"/>';
-  else if (shape === 'teardrop') body = '<path d="M20 4C23 12 32 18 32 26a12 12 0 0 1-24 0C8 18 17 12 20 4Z"/>';
-  else if (shape === 'star') body = `<polygon points="${poly(shapeOutline('star'), 21)}"/>`;
-  else body = `<polygon points="${poly(shapeOutline('heart'), 22)}"/>`;
-  return `<svg viewBox="0 0 40 40"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient></defs><g fill="url(#${id})" stroke="#fff" stroke-width="1.6" stroke-linejoin="round">${body}</g><circle cx="15" cy="14" r="2.6" fill="#fff" opacity=".85"/></svg>`;
-}
+const SHAPE_ICON: Record<Shape, string> = { round: 'circle', sparkle: 'sparkle', heart: 'heart', star: 'star' };
+const COLOR_KEYS = Object.keys(COLORS);
 function buildTray() {
   const sg = $('shapeGrid');
-  SHAPES.forEach((sh, i) => {
+  SHAPES.forEach((sh) => {
     const b = document.createElement('button');
-    b.className = 'gemBtn';
+    b.className = 'gembtn';
     b.dataset.shape = sh;
     b.title = sh;
-    b.dataset.i = String(i);
+    b.innerHTML = `<i data-icon="${SHAPE_ICON[sh]}"></i>`;
     sg.appendChild(b);
   });
-  const cg = $('colorGrid');
-  for (const c of Object.keys(COLORS)) {
+  const cl = $('colorList');
+  for (const c of COLOR_KEYS) {
     const b = document.createElement('button');
-    b.className = 'colBtn';
+    b.className = 'colbtn';
     b.dataset.color = c;
     b.title = COLORS[c].label;
-    b.style.background =
-      c === 'rainbow' ? 'linear-gradient(135deg,#ff6ec7,#6bbcff,#ffcf4d,#b98aff)' : '#' + COLORS[c].hex.toString(16).padStart(6, '0');
-    cg.appendChild(b);
+    b.innerHTML = `<b style="background:#${COLORS[c].hex.toString(16).padStart(6, '0')}"></b>`;
+    cl.appendChild(b);
   }
+  injectIcons(sg);
   markTray();
 }
-function markTray() {
-  document.querySelectorAll<HTMLElement>('.gemBtn').forEach((b, i) => {
-    b.innerHTML = gemSvg(b.dataset.shape as Shape, sel.color, i);
-    b.classList.toggle('on', b.dataset.shape === sel.shape);
-  });
-  document.querySelectorAll<HTMLElement>('.colBtn').forEach((b) => b.classList.toggle('on', b.dataset.color === sel.color));
-  document.querySelectorAll<HTMLElement>('[data-size]').forEach((b) => b.classList.toggle('on', b.dataset.size === sel.size));
+function scrollColorIntoView() {
+  const list = $('colorList');
+  const b = list.querySelector<HTMLElement>('.colbtn.on');
+  if (b) list.scrollTo({ top: b.offsetTop - list.offsetTop - list.clientHeight / 2 + 24, behavior: 'smooth' });
 }
+function markTray() {
+  document.querySelectorAll<HTMLElement>('.gembtn').forEach((b) => b.classList.toggle('on', b.dataset.shape === sel.shape));
+  document.querySelectorAll<HTMLElement>('.colbtn').forEach((b) => b.classList.toggle('on', b.dataset.color === sel.color));
+  document.querySelectorAll<HTMLElement>('[data-size]').forEach((b) => b.classList.toggle('on', b.dataset.size === sel.size));
+  scrollColorIntoView();
+}
+function updateChevrons() {
+  const l = $('colorList');
+  ($('colUp') as HTMLButtonElement).disabled = l.scrollTop <= 1;
+  ($('colDown') as HTMLButtonElement).disabled = l.scrollTop + l.clientHeight >= l.scrollHeight - 2;
+}
+$('colorList').addEventListener('scroll', updateChevrons);
+$('colUp').onclick = () => $('colorList').scrollBy({ top: -180, behavior: 'smooth' });
+$('colDown').onclick = () => $('colorList').scrollBy({ top: 180, behavior: 'smooth' });
 const TOOL_HINT: Record<Tool, string> = {
-  gem: 'Gem: pinch a gem on the right, drop it on your face',
-  brush: 'Brush: point with one finger (or drag the mouse) over your face',
-  eraser: 'Eraser: pinch gems on your face to remove them',
+  gem: 'Pinch a gem, drop it on your face',
+  brush: 'Point (or drag) over your face',
+  eraser: 'Pinch a gem to remove it',
 };
 function setTool(t: Tool) {
   tool = t;
-  if (phase === 'decorate') say(TOOL_HINT[t], 3500);
+  show('gemPanel', t !== 'brush'); // the brush scatters its own gems, so no gem picker
+  if (phase === 'decorate') say(TOOL_HINT[t], 3000);
   document.querySelectorAll<HTMLElement>('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
 }
 
@@ -190,12 +221,12 @@ function gemScreen(g: Gem): [number, number] {
   else tmp.copy(g.pos);
   return stage.worldToScreen(tmp);
 }
-function gemAt(sx: number, sy: number): Gem | null {
+function gemAt(sx: number, sy: number, extra = 0): Gem | null {
   let best: Gem | null = null;
   let bd = 1e9;
   for (const g of gems) {
     const [x, y] = gemScreen(g);
-    const r = Math.max(g.rel * stage.faceWidth * stage.pxScale * 0.5, 12) + 10;
+    const r = Math.max(g.rel * stage.faceWidth * stage.pxScale * 0.5, 12) + 10 + extra;
     const d = Math.hypot(x - sx, y - sy);
     if (d < r && d < bd) { bd = d; best = g; }
   }
@@ -218,7 +249,6 @@ function burstAt(g: Gem) {
   stage.burst(c, 6, g.color);
   audio.sparkle();
 }
-const COLOR_KEYS = Object.keys(COLORS);
 function cycleColor(d: number) {
   const i = (COLOR_KEYS.indexOf(sel.color) + d + COLOR_KEYS.length) % COLOR_KEYS.length;
   sel.color = COLOR_KEYS[i];
@@ -252,7 +282,7 @@ function trailPoint(sx: number, sy: number) {
   lastTrail = tmp.clone();
   const jx = tmp.x + rand(-1, 1) * spacing * 0.3, jy = tmp.y + rand(-1, 1) * spacing * 0.3;
   const h = stage.hitFace(jx, jy) ?? hit;
-  const g = makeGem(Math.random() < 0.8 ? 'round' : 'teardrop', Math.random() < 0.2 ? sizePx('medium') : rand(5, 11), resolveColor(sel.color));
+  const g = makeGem(Math.random() < 0.8 ? 'round' : 'sparkle', Math.random() < 0.2 ? sizePx('medium') : rand(5, 11), resolveColor(sel.color));
   g.mode = 'anchored';
   g.tri = h.tri;
   g.b = h.b;
@@ -279,7 +309,7 @@ function targetAt(x: number, y: number): Element | null {
   if (el?.closest('button')) return el;
   let best: Element | null = null;
   let bd = 36;
-  document.querySelectorAll<HTMLElement>('#toolbar button, #tray button, .screen:not(.hidden) button').forEach((b) => {
+  document.querySelectorAll<HTMLElement>('#hud button, #musicBtn, .screen:not(.hidden) button').forEach((b) => {
     if (b.offsetParent === null) return;
     const r = b.getBoundingClientRect();
     const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
@@ -300,8 +330,8 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
   if (gemBtn) {
     sel.shape = gemBtn.dataset.shape as Shape;
     markTray();
-    if (phase !== 'decorate' || tool === 'brush') return;
-    if (tool === 'eraser') setTool('gem');
+    if (phase !== 'decorate') return;
+    if (tool !== 'gem') setTool('gem'); // picking a gem always switches to the Gem tool
     if (capReached()) return;
     const g = makeGem(sel.shape, sizePx(sel.size), resolveColor(sel.color));
     g.lift = true;
@@ -319,7 +349,8 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
   const hit = gemAt(x, y);
   if (tool === 'eraser') {
     erasing = true;
-    if (hit) removeGem(hit);
+    const eh = gemAt(x, y, 10);
+    if (eh) removeGem(eh);
     return;
   }
   if (hit) {
@@ -337,7 +368,7 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
 function move(x: number, y: number) {
   if (drag) snapToFace(drag.gem, x, y);
   else if (erasing) {
-    const g = gemAt(x, y);
+    const g = gemAt(x, y, 10);
     if (g) removeGem(g);
   } else if (stroke && strokeSource) trailPoint(x, y);
 }
@@ -382,16 +413,13 @@ addEventListener('keydown', (e) => {
   if (phase !== 'decorate') return;
   if (e.key.toLowerCase() === 'z') undo();
   if (e.key === 'Enter') finishDecorate();
-  if (e.key === 'ArrowRight') cycleColor(1);
-  if (e.key === 'ArrowLeft') cycleColor(-1);
+  if (e.key === 'ArrowDown') cycleColor(1);
+  if (e.key === 'ArrowUp') cycleColor(-1);
 });
 
 // ---------------------------------------------------------------- selfie flow
-let selLayout: LayoutKey = '1';
-let selBg: Background;
-let shots: HTMLCanvasElement[] = [];
+let selFrame: Frame | null = null;
 let busy = false;
-const currentWindows = () => selBg.windows[selLayout];
 
 function finishDecorate() {
   if (phase !== 'decorate') return;
@@ -401,88 +429,60 @@ function finishDecorate() {
   buildSetup();
 }
 function buildSetup() {
-  const lp = $('layoutPick');
-  lp.innerHTML = '';
-  (Object.keys(manifest.layouts) as LayoutKey[]).forEach((k) => {
+  const fp = $('framePick');
+  fp.innerHTML = '';
+  manifest.frames.forEach((f) => {
     const b = document.createElement('button');
-    b.className = 'opt' + (k === selLayout ? ' on' : '');
-    b.textContent = manifest.layouts[k].label;
-    b.onclick = () => { selLayout = k; buildSetup(); };
-    lp.appendChild(b);
+    b.className = 'btn sq grey' + (f === selFrame ? ' on' : '');
+    b.innerHTML = `<i data-icon="camera"></i><span>${f.name}</span>`;
+    b.onclick = () => { selFrame = f; buildSetup(); };
+    fp.appendChild(b);
   });
-  const bp = $('bgPick');
-  bp.innerHTML = '';
-  manifest.backgrounds.forEach((bg) => {
-    const b = document.createElement('button');
-    b.className = 'opt' + (bg === selBg ? ' on' : '');
-    b.innerHTML = `<img src="${assetUrl(bg.thumb)}" alt=""/>${bg.name}`;
-    b.onclick = () => { selBg = bg; buildSetup(); };
-    bp.appendChild(b);
-  });
+  injectIcons(fp);
+  ($('takePhoto') as HTMLButtonElement).disabled = !selFrame;
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+let finalCanvas: HTMLCanvasElement | null = null;
 
-async function runCapture(indices: number[]) {
-  if (busy) return;
+async function runCapture() {
+  if (busy || !selFrame) return;
   busy = true;
   setPhase('capture');
   placeCropMask();
   const cd = $('countdown');
   audio.duck(true);
-  cd.style.fontSize = '5vmin';
+  cd.classList.add('msg');
   cd.textContent = 'Lower your hand…';
   await sleep(1400);
-  cd.style.fontSize = '';
-  for (let n = 0; n < indices.length; n++) {
-    const i = indices[n];
-    for (let s = CONFIG.capture.countdownSeconds; s > 0; s--) {
-      cd.textContent = String(s);
-      audio.tick();
-      await sleep(1000);
-    }
-    cd.textContent = '';
-    audio.shutter();
-    const w = currentWindows()[i];
-    stage.render(0);
-    shots[i] = cropToAspect(stage.canvas, w.w / w.h);
-    const f = $('flash');
-    f.classList.add('go');
-    requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove('go')));
-    if (n < indices.length - 1) {
-      cd.style.fontSize = '5vmin';
-      cd.textContent = 'Next pose!';
-      await sleep(CONFIG.capture.pauseBetweenMs);
-      cd.style.fontSize = '';
-    }
+  cd.classList.remove('msg');
+  for (let s = CONFIG.capture.countdownSeconds; s > 0; s--) {
+    cd.textContent = String(s);
+    audio.tick();
+    await sleep(1000);
   }
+  cd.textContent = '';
+  audio.shutter();
+  stage.render(0);
+  const shot = cropToAspect(stage.canvas, windowAspect(selFrame));
+  const f = $('flash');
+  f.classList.add('go');
+  requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove('go')));
   audio.duck(false);
-  await showResult();
+  finalCanvas = await composeFrame(manifest, selFrame, shot);
+  ($('resultImg') as HTMLImageElement).src = finalCanvas.toDataURL('image/png');
+  setPhase('result');
   busy = false;
 }
-let finalCanvas: HTMLCanvasElement | null = null;
-async function showResult() {
-  finalCanvas = await composeStrip(manifest, selBg, selLayout, shots);
-  ($('resultImg') as HTMLImageElement).src = finalCanvas.toDataURL('image/png');
-  const two = selLayout === '2';
-  show('retake1', two);
-  show('retake2', two);
-  setPhase('result');
-}
-const allIdx = () => currentWindows().map((_, i) => i);
-$('takePhoto').onclick = () => { shots = []; runCapture(allIdx()); };
+$('takePhoto').onclick = runCapture;
 $('setupBack').onclick = () => setPhase('decorate');
-$('retake').onclick = () => runCapture(allIdx());
-$('retake1').onclick = () => runCapture([0]);
-$('retake2').onclick = () => runCapture([1]);
+$('retake').onclick = runCapture;
 $('backDecor').onclick = () => setPhase('decorate');
-$('startOver').onclick = () => { gems = []; falling = []; history.length = 0; setPhase('decorate'); };
 $('save').onclick = () => {
   if (!finalCanvas) return;
   const a = document.createElement('a');
   a.href = finalCanvas.toDataURL('image/png');
   a.download = `bedazzle-booth-${Date.now()}.png`;
   a.click();
-  say('Saved. You look unreal.');
 };
 
 // ---------------------------------------------------------------- toolbar wiring
@@ -492,7 +492,7 @@ document.querySelectorAll<HTMLElement>('[data-size]').forEach(
 );
 // brief "pressed" flash for any button activation (mouse or hand)
 document.addEventListener('click', (e) => {
-  const b = (e.target as Element).closest<HTMLElement>('.tool, .mini, .gel');
+  const b = (e.target as Element).closest<HTMLElement>('.btn:not(.on)');
   if (!b) return;
   b.classList.add('pressed');
   setTimeout(() => b.classList.remove('pressed'), 280);
@@ -512,7 +512,7 @@ try {
 function applyMusic() {
   audio.setTrack(+trackSel.value);
   audio.setOn(musicOn.checked);
-  $('musicBtn').classList.toggle('off', !musicOn.checked);
+  updateMusicBtn();
   try { sessionStorage.setItem('bb-music', JSON.stringify({ on: musicOn.checked, track: +trackSel.value })); } catch { /* ignore */ }
 }
 musicOn.onchange = applyMusic;
@@ -521,14 +521,22 @@ $('musicBtn').onclick = () => {
   musicOn.checked = !musicOn.checked;
   applyMusic();
 };
-$('musicBtn').classList.toggle('off', !musicOn.checked);
+function updateMusicBtn() {
+  const b = $('musicBtn');
+  b.classList.toggle('off', !musicOn.checked);
+  b.innerHTML = `<i data-icon="${musicOn.checked ? 'volume-2' : 'volume-x'}"></i><span>${musicOn.checked ? 'On' : 'Off'}</span>`;
+  injectIcons(b);
+}
+updateMusicBtn();
 
 // ---------------------------------------------------------------- boot
 let handDriving = false;
 let wasPinch = false;
-let dwellEl: HTMLElement | null = null;
+let pinchUsed = false;
+let dwellEl: HTMLButtonElement | null = null;
 let dwellStart = 0;
-let dwellDone: HTMLElement | null = null;
+let dwellSeen = 0;
+let dwellDone: HTMLButtonElement | null = null;
 let faceOK = false;
 let lastFaceT = 0;
 let lastVT = -1;
@@ -563,8 +571,7 @@ $('start').onclick = async () => {
   $('checkTitle').textContent = 'Loading trackers…';
   try {
     manifest = await loadManifest();
-    selBg = manifest.backgrounds[0];
-    stage = new Stage(glCanvas, video, VW, VH);
+        stage = new Stage(glCanvas, video, VW, VH);
     layer = new GemLayer(stage.scene);
     tracker = new Tracker();
     await tracker.init();
@@ -600,8 +607,9 @@ $('guideOk').onclick = closeGuide;
 $('help').onclick = openGuide;
 let swipeFlash = 0;
 function lightGuide(hs: ReturnType<HandGestures['update']>, now: number) {
-  if (hs.events.some((e) => e === 'swipeLeft' || e === 'swipeRight')) swipeFlash = now + 800;
+  if (hs.events.some((e) => e === 'swipeUp' || e === 'swipeDown')) swipeFlash = now + 800;
   const on: Record<string, boolean> = {
+    'gc-tool': !!document.querySelector('.btn.hover'),
     'gc-pinch': hs.pinching, 'gc-point': hs.pointing, 'gc-fist': hs.fist,
     'gc-thumb': hs.thumbsUpProgress > 0, 'gc-swipe': now < swipeFlash,
   };
@@ -693,26 +701,53 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   document.querySelectorAll('.hover').forEach((e) => e.classList.remove('hover'));
   targetAt(px, py)?.closest('button')?.classList.add('hover');
 
-  // Dwell: hold the cursor over a button (no pinch needed) to press it.
-  const tgt = (targetAt(px, py)?.closest('button') as HTMLElement | null) ?? null;
-  if (tgt !== dwellEl) { dwellEl = tgt; dwellStart = performance.now(); }
+  // Dwell: hold the cursor over ANY button (no pinch needed) to press it.
+  const nowMs = performance.now();
+  let tgt = (targetAt(px, py)?.closest('button') as HTMLButtonElement | null) ?? null;
+  if (tgt?.disabled) tgt = null;
+  if (tgt) dwellSeen = nowMs;
+  else if (dwellEl && nowMs - dwellSeen < 250) tgt = dwellEl; // forgive brief jitter off the edge
+  if (tgt !== dwellEl) { dwellEl = tgt; dwellStart = nowMs; }
   if (dwellDone && tgt !== dwellDone) dwellDone = null;
   let prog = 0;
-  if (tgt && !tgt.dataset.shape && !hs.pinching && tgt !== dwellDone) {
-    prog = Math.min(1, (performance.now() - dwellStart) / CONFIG.gestures.dwellMs);
-    if (prog >= 1) { dwellDone = tgt; prog = 0; press(px, py, 'hand'); }
+  if (tgt && !drag && !stroke && tgt !== dwellDone) {
+    prog = Math.min(1, (nowMs - dwellStart) / CONFIG.gestures.dwellMs);
+    if (prog >= 1) {
+      dwellDone = tgt;
+      prog = 0;
+      if (tgt.dataset.shape) { // gem shapes: dwell selects (dragging a gem needs a pinch)
+        sel.shape = tgt.dataset.shape as Shape;
+        markTray();
+        say('Pinch and drag to place it', 2500);
+      } else press(px, py, 'hand');
+    }
   }
   cur.style.setProperty('--p', String(prog));
 
   if (hs.pinching && !wasPinch) {
     if (tgt) dwellDone = tgt; // a pinch-press must not be followed by a dwell-press
     press(px, py, 'hand');
-  } else if (hs.pinching) move(px, py);
-  else if (wasPinch) release();
+    pinchUsed = !!(drag || stroke || erasing || tgt);
+  } else if (hs.pinching) {
+    // Pinch started elsewhere and slid onto a gem (or button): still grab it.
+    if (!pinchUsed && !drag && tgt && !tgt.disabled) {
+      dwellDone = tgt;
+      press(px, py, 'hand');
+      pinchUsed = true;
+    } else move(px, py);
+  } else {
+    if (wasPinch) release();
+    pinchUsed = false;
+  }
   wasPinch = hs.pinching;
 
   if (phase !== 'decorate') return;
   // freehand trail while pointing
+  // eraser: just point (or pinch) at gems, no click needed
+  if (tool === 'eraser' && (hs.pointing || hs.pinching)) {
+    const g = gemAt(px, py, 18);
+    if (g) removeGem(g);
+  }
   if (tool === 'brush' && hs.pointing && !hs.pinching) {
     if (!stroke) { stroke = []; strokeSource = 'hand'; }
     if (strokeSource === 'hand') trailPoint(px, py);
@@ -721,10 +756,26 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   for (const ev of hs.events) {
     if (ev === 'undo') undo();
     else if (ev === 'done') finishDecorate();
-    else if (ev === 'swipeRight') cycleColor(1);
-    else if (ev === 'swipeLeft') cycleColor(-1);
+    else if (ev === 'swipeDown') cycleColor(1);
+    else if (ev === 'swipeUp') cycleColor(-1);
   }
 }
 
 setPhase('landing');
 layout();
+
+// Design QA: open a screen without the camera, e.g. /?screen=decorate
+const demo = new URLSearchParams(location.search).get('screen') as Phase | null;
+if (demo) {
+  loadManifest().then((m) => {
+    manifest = m;
+    buildTray();
+    selFrame = m.frames[0];
+    if (demo === 'setup') buildSetup();
+    if (demo === 'result') {
+      ($('resultImg') as HTMLImageElement).src = '/assets/frames/phone.png';
+    }
+    setPhase(demo);
+    layout();
+  });
+}

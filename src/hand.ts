@@ -1,6 +1,6 @@
 import { CONFIG } from './config';
 
-export type HandEvent = 'undo' | 'done' | 'swipeLeft' | 'swipeRight';
+export type HandEvent = 'undo' | 'done' | 'swipeUp' | 'swipeDown';
 export interface HandState {
   present: boolean;
   /** Cursor in mirrored normalized image space (0..1). */
@@ -60,10 +60,11 @@ export class HandGestures {
 
     // Pinch with hysteresis. A fist must never read as a pinch.
     const pinchD = this.d(l, 4, 8) / size;
-    const fistLike = allCurled && !thumbUp;
+    // a real fist has the index tucked right in; a pinch keeps the index a bit out
+    const fistLike = allCurled && idx < 1.1 && !thumbUp;
     if (this.pinching) {
       if (pinchD > G.pinchRelease) this.pinching = false;
-    } else if (pinchD < G.pinchEngage && (!fistLike || pinchD < 0.22)) {
+    } else if (pinchD < G.pinchEngage && (!fistLike || pinchD < 0.3)) {
       this.pinching = true;
     }
     s.pinching = this.pinching;
@@ -111,18 +112,20 @@ export class HandGestures {
     }
 
 
-    // Swipe: open flat hand sweeping sideways (left/right on screen, mirrored).
-    const open = extended(idx) && extended(mid) && extended(ring) && extended(pinky);
+    // Swipe: open flat hand sweeping up or down the screen.
+    const openCount = [idx, mid, ring, pinky].filter((r) => r > G.swipeOpenRatio).length;
+    const open = openCount >= 3; // mostly open hand
     if (open && !this.pinching) {
       this.trail.push({ t: now, x: 1 - l[9 * 3], y: l[9 * 3 + 1] });
       while (this.trail.length && now - this.trail[0].t > G.swipeWindowMs) this.trail.shift();
       const a = this.trail[0];
       const b = this.trail[this.trail.length - 1];
-      const dx = b.x - a.x, dy = (b.y - a.y) / this.aspect * 1; // dy in width units
-      if (now - this.lastSwipe > G.swipeCooldownMs && Math.abs(dx) > G.swipeDistance && Math.abs(dx) > 2.5 * Math.abs(dy)) {
+      const dy = b.y - a.y; // fraction of screen height (down is positive)
+      const dx = (b.x - a.x) * this.aspect; // same units as dy
+      if (now - this.lastSwipe > G.swipeCooldownMs && Math.abs(dy) > G.swipeDistance && Math.abs(dy) > G.swipeStraight * Math.abs(dx)) {
         this.lastSwipe = now;
         this.trail = [];
-        s.events.push(dx > 0 ? 'swipeRight' : 'swipeLeft');
+        s.events.push(dy > 0 ? 'swipeDown' : 'swipeUp');
       }
     } else this.trail = [];
     return s;

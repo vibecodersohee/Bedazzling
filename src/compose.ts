@@ -1,23 +1,13 @@
-export type LayoutKey = '1' | '2';
-export interface Rect { x: number; y: number; w: number; h: number }
-export interface Background {
+export interface Frame {
   id: string;
   name: string;
-  thumb: string;
-  files: Record<LayoutKey, string>;
-  windows: Record<LayoutKey, Rect[]>;
-}
-export interface Sticker {
   file: string;
-  layout: LayoutKey;
-  backgrounds: string[]; // empty = all
-  x: number; y: number; w: number; h: number;
-  rotate?: number;
+  /** window corners: top-left, top-right, bottom-right, bottom-left (canvas px) */
+  quad: [number, number][];
 }
 export interface Manifest {
-  layouts: Record<LayoutKey, { width: number; height: number; label: string }>;
-  backgrounds: Background[];
-  stickers: Sticker[];
+  canvas: { width: number; height: number };
+  frames: Frame[];
 }
 
 const base = import.meta.env.BASE_URL + 'assets/';
@@ -41,12 +31,17 @@ function loadImage(file: string): Promise<HTMLImageElement> {
   }
   return p;
 }
-export const assetUrl = (file: string) => base + file;
+
+const dist = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+/** Width / height of the frame window (measured along the quad's own axes). */
+export function windowAspect(f: Frame) {
+  return dist(f.quad[0], f.quad[1]) / dist(f.quad[0], f.quad[3]);
+}
 
 /** Crop a source canvas to the window aspect (cover, centered). */
-export function cropToAspect(src: HTMLCanvasElement | HTMLVideoElement, aspect: number): HTMLCanvasElement {
-  const sw = src instanceof HTMLVideoElement ? src.videoWidth : src.width;
-  const sh = src instanceof HTMLVideoElement ? src.videoHeight : src.height;
+export function cropToAspect(src: HTMLCanvasElement, aspect: number): HTMLCanvasElement {
+  const sw = src.width, sh = src.height;
   let cw = sw, ch = sh;
   if (sw / sh > aspect) cw = sh * aspect;
   else ch = sw / aspect;
@@ -57,32 +52,25 @@ export function cropToAspect(src: HTMLCanvasElement | HTMLVideoElement, aspect: 
   return out;
 }
 
-export async function composeStrip(m: Manifest, bg: Background, layout: LayoutKey, shots: HTMLCanvasElement[]): Promise<HTMLCanvasElement> {
-  const { width, height } = m.layouts[layout];
+/** Selfie goes under the frame art, mapped onto the (possibly tilted) window quad. */
+export async function composeFrame(m: Manifest, f: Frame, shot: HTMLCanvasElement): Promise<HTMLCanvasElement> {
+  const { width, height } = m.canvas;
   const c = document.createElement('canvas');
   c.width = width;
   c.height = height;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#ffe3f1';
+  g.fillStyle = '#ffd0e8';
   g.fillRect(0, 0, width, height);
-  try {
-    g.drawImage(await loadImage(bg.files[layout]), 0, 0, width, height);
-  } catch { /* placeholder missing: keep flat pink */ }
-  bg.windows[layout].forEach((w, i) => {
-    const s = shots[i];
-    if (s) g.drawImage(s, w.x, w.y, w.w, w.h);
-  });
-  for (const st of m.stickers) {
-    if (st.layout !== layout) continue;
-    if (st.backgrounds.length && !st.backgrounds.includes(bg.id)) continue;
-    try {
-      const img = await loadImage(st.file);
-      g.save();
-      g.translate(st.x + st.w / 2, st.y + st.h / 2);
-      g.rotate(((st.rotate ?? 0) * Math.PI) / 180);
-      g.drawImage(img, -st.w / 2, -st.h / 2, st.w, st.h);
-      g.restore();
-    } catch { /* skip missing sticker */ }
-  }
+
+  const [tl, tr, , bl] = f.quad;
+  const w = dist(tl, tr), h = dist(tl, bl);
+  // Slightly oversize so the frame art hides the seams.
+  const pad = 6;
+  g.save();
+  g.setTransform((tr[0] - tl[0]) / w, (tr[1] - tl[1]) / w, (bl[0] - tl[0]) / h, (bl[1] - tl[1]) / h, tl[0], tl[1]);
+  g.drawImage(shot, -pad, -pad, w + pad * 2, h + pad * 2);
+  g.restore();
+
+  g.drawImage(await loadImage(f.file), 0, 0, width, height);
   return c;
 }

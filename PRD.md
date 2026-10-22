@@ -1,6 +1,6 @@
 # PRD: Bedazzle Booth
 
-Version 0.3 | Draft | Updated October 15, 2026
+Version 0.4 | Draft | Updated October 20, 2026
 Build tool: Claude Code, one phase at a time (see section 14)
 
 ---
@@ -50,7 +50,7 @@ Gen-Z users on a laptop or desktop with a webcam who enjoy beauty and nostalgia 
 | Onboarding | Gesture guide screen on first Decorate, reopen with the Help button (v0.3) |
 | Pressing buttons by hand | Pinch, or hold the cursor over a button about 1 second (dwell) (v0.3) |
 | Music | 3 Y2K style background tracks, user can turn on and off. v0.3 uses synthesized loops, no licensed files |
-| Visual style | Bedazzled Y2K gadget: hot pink, glossy, modern, less cute. No device frame |
+| Visual style | Bedazzled Y2K gadget: hot pink, glossy, modern, less cute. No device frame. v0.4 implements the Figma design system and screens (Vibe-coding-projects file) |
 | Font | DotGothic16 (flip phone style pixel font) |
 | Name | Bedazzle Booth (final) |
 | Background and sticker art | Sohee creates the final assets. Claude Code builds simple placeholders first, designed to be swapped without code changes (see 8.2) |
@@ -89,7 +89,8 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 
 ### 7.1 Layout
 - The live camera fills the screen and is mirrored.
-- Gem tray sits on the right: pick a color, pick a size, then pinch one of four big shape buttons to take a gem.
+- Gems panel sits bottom center: size pills (Small, Medium, Large) above four shape buttons (circle, sparkle, heart, star).
+- Colors panel on the right is a vertical scrolling list with up and down chevrons (8 colors from the design system). Swiping changes the color too.
 - A tool bar on the left holds Gem, Brush, Eraser, Undo, Clear all, Help and Done. Clear all is undoable. Buttons are large enough to hit with a pinch.
 - A gesture guide shows on the first visit to Decorate. Cards light up when the matching gesture is detected.
 - A small status area shows tracking state and short messages in the LCD style (see section 9).
@@ -106,7 +107,7 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 | Move a placed gem | Pinch the gem on the face, drag, release | |
 | Remove a placed gem | Pinch it, drag it off the face, release | Gem pops with a small sparkle |
 | Freehand trail | With Brush active, point with index finger only (other fingers curled) and move over the face | See 7.3 |
-| Change color | Open flat hand, sweep left or right (arrow keys on keyboard) | Left to right = next color, right to left = previous. Swatches can still be pressed |
+| Change color | Open flat hand, sweep up or down (up/down arrow keys on keyboard) | Down = next color, up = previous. Swatches can still be pressed |
 | Undo | Closed fist held for half a second, or the Undo button | Undoes the last placement or stroke |
 | Finish | Thumbs up held for 1 second, or Done button | Show a progress ring while holding |
 
@@ -127,9 +128,9 @@ Gesture rules:
 
 | Property | Options (version 1) |
 |---|---|
-| Shapes | Round, teardrop, star, heart |
+| Shapes | Circle, sparkle (4 point), heart, star |
 | Sizes | Small (7 px), medium (20 px), large (46 px, a hero stone like the heart in the reference photo). Pixel values are at a 420 px wide face and scale with the face |
-| Colors | Pink family first (hot pink, light pink, ruby), plus clear/diamond, blue, purple, green, gold. Mixed "rainbow" option for scatter |
+| Colors | White, yellow #ffcd1e, pink #ff0095, baby pink #ffafdb, red #e5004c, blue #47bfff, purple #c288ff, green #00e79b |
 | Behavior | Faces outward along the surface normal, small random rotation, slight random size variation |
 | Limit | Cap at about 400 gems total, show a friendly message if reached |
 
@@ -137,35 +138,21 @@ Keep the eye area and lips usable but do not hard block them. Optionally show a 
 
 ## 8. Selfie step: detailed spec
 
-### 8.1 Layout choice
-- **1 cut:** one photo, 4:5 portrait (default output 1080 x 1350).
-- **2 cuts:** two photos stacked vertically on one strip (default output 1080 x 1920).
-- Output sizes are defaults and can change after testing.
+### 8.1 Frame choice (v0.4: one cut only)
+- One photo, 4:5 portrait, 1080 x 1350. The 2 cut strip was removed.
+- The user picks one of 3 frames (Frame 1 phone, Frame 2 TV, Frame 3 camera), then presses Take photo (disabled until a frame is chosen).
 
-### 8.2 Backgrounds
-- User picks one background before the countdown. Version 1 ships with about 3 options, for example: pink iridescent tile, scalloped stamp frame on pink, and a plain pearl pink.
-- The photo sits inside the background like a framed print. Decorative stickers (bow, butterflies, bubbles) can sit around the frame, never over the face.
-- **Final art comes from Sohee.** Claude Code must not try to design polished backgrounds or stickers. Build clearly labeled placeholders first.
-- **Placeholder backgrounds:** simple generated images (flat or gradient pink, a plain scalloped border drawn with canvas or SVG, a pearl pink). Each placeholder shows its own name in small text so it is obvious it is a placeholder.
-- **Placeholder stickers:** plain simple shapes (for example a basic bow, butterfly and bubble drawn as simple SVG), kept small and positioned around the frame, never over the face.
-- **Swap friendly structure:**
-  - Backgrounds live in `public/assets/backgrounds/`, stickers in `public/assets/stickers/`.
-  - A single manifest file (for example `assets/manifest.json`) lists each background (id, display name, file, thumbnail, photo window position and size per layout) and each sticker (file, position, size, which backgrounds it belongs to).
-  - Replacing a placeholder means dropping in a new file and editing the manifest, with no code changes. Adding a new background is one new manifest entry.
-  - Document the expected image sizes in a short README in the assets folder: 1080 x 1350 for the 1 cut background and 1080 x 1920 for the 2 cut background, PNG with transparency where needed.
-- The photo window (where the selfie shows through) is defined per background in the manifest, so Sohee's final art can use any frame shape.
+### 8.2 Frames
+- Frames are 1080 x 1350 PNGs in `public/assets/frames/` with a transparent window for the selfie. The selfie is drawn under the frame art and mapped onto the window quad, so tilted windows work.
+- `assets/manifest.json` lists each frame (id, name, file, window quad). Swapping art = replace the PNG and update the quad (`scripts/make-frames.py` detects it). Adding a frame = one new entry.
 
 ### 8.3 Capture
-- Hide the hand cursor, tray and tool bar. Show a message asking the user to lower their hand.
-- 3 second countdown shown in large pixel numbers, with a shutter sound.
+- Hide the HUD. Show "Lower your hand" then a 3 second countdown in large pixel numbers with a shutter sound. A dashed crop box shows what will be in the window.
 - Gems stay live during the countdown.
-- For 2 cuts, the second countdown starts after a short pause. The user may pose differently.
-- Compose the final image on a canvas: background, then photo cuts (mirrored to match what the user saw), with gems included.
+- Compose: selfie (mirrored, as seen) cropped to the window aspect, under the frame.
 
 ### 8.4 Result screen
-- Preview of the final image.
-- Buttons: Save as PNG, Retake (same layout and background), Back to Decorate (gems preserved), Start Over.
-- Retake for 2 cuts lets the user redo one cut or both.
+- Frame preview with Save PNG, Retake, Back to decorate (gems kept).
 
 ## 9. Visual design: "Bedazzled Gadget"
 

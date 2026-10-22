@@ -2,26 +2,22 @@ import * as THREE from 'three';
 import { CONFIG } from './config';
 import type { Stage } from './stage';
 
-export type Shape = 'round' | 'teardrop' | 'star' | 'heart';
-export const SHAPES: Shape[] = ['round', 'teardrop', 'star', 'heart'];
+export type Shape = 'round' | 'sparkle' | 'heart' | 'star';
+export const SHAPES: Shape[] = ['round', 'sparkle', 'heart', 'star'];
 export type SizeKey = 'small' | 'medium' | 'large';
 
+// Palette from the design system (Figma "Color chip")
 export const COLORS: Record<string, { label: string; hex: number }> = {
-  hot: { label: 'Hot pink', hex: 0xff2e93 },
-  light: { label: 'Light pink', hex: 0xffb3d9 },
-  ruby: { label: 'Ruby', hex: 0xd10f4f },
-  clear: { label: 'Diamond', hex: 0xffffff },
-  blue: { label: 'Ice blue', hex: 0x6bbcff },
-  purple: { label: 'Lilac', hex: 0xb98aff },
-  green: { label: 'Mint', hex: 0x4fe3a1 },
-  gold: { label: 'Gold', hex: 0xffcf4d },
-  rainbow: { label: 'Mix', hex: 0xffffff },
+  white: { label: 'White', hex: 0xffffff },
+  yellow: { label: 'Yellow', hex: 0xffcd1e },
+  pink: { label: 'Pink', hex: 0xff0095 },
+  babypink: { label: 'Baby pink', hex: 0xffafdb },
+  red: { label: 'Red', hex: 0xe5004c },
+  blue: { label: 'Blue', hex: 0x47bfff },
+  purple: { label: 'Purple', hex: 0xc288ff },
+  green: { label: 'Green', hex: 0x00e79b },
 };
-const MIX = ['hot', 'light', 'ruby', 'clear', 'blue', 'purple', 'gold'];
-export function resolveColor(key: string): number {
-  if (key === 'rainbow') return COLORS[MIX[(Math.random() * MIX.length) | 0]].hex;
-  return COLORS[key].hex;
-}
+export const resolveColor = (key: string): number => COLORS[key].hex;
 
 export interface Gem {
   id: number;
@@ -79,6 +75,11 @@ function extrude(shape: THREE.Shape, curveSegments: number) {
   });
   return normalize(g, 0.2);
 }
+function polyShape(pts: [number, number][]) {
+  const s = new THREE.Shape();
+  pts.forEach((p, i) => (i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])));
+  return s;
+}
 function makeGeometry(shape: Shape): THREE.BufferGeometry {
   if (shape === 'round') {
     // brilliant cut: table, crown, girdle, pavilion
@@ -90,23 +91,22 @@ function makeGeometry(shape: Shape): THREE.BufferGeometry {
     return normalize(g, 0);
   }
   const s = new THREE.Shape();
-  if (shape === 'teardrop') {
-    s.moveTo(0, 0.5);
-    s.bezierCurveTo(0.12, 0.25, 0.32, 0.05, 0.32, -0.2);
-    s.bezierCurveTo(0.32, -0.42, 0.17, -0.5, 0, -0.5);
-    s.bezierCurveTo(-0.17, -0.5, -0.32, -0.42, -0.32, -0.2);
-    s.bezierCurveTo(-0.32, 0.05, -0.12, 0.25, 0, 0.5);
-    return extrude(s, 6);
-  }
   const pts = shapeOutline(shape, 24);
+  if (shape === 'sparkle') return extrude(polyShape(pts), 1);
   pts.forEach((p, i) => (i ? s.lineTo(p[0], p[1]) : s.moveTo(p[0], p[1])));
   return extrude(s, 1);
 }
 
 /** Outline in roughly [-1,1] space, y up. Used for gems and stamp previews. */
-export function shapeOutline(shape: 'star' | 'heart' | Shape, n = 48): [number, number][] {
+export function shapeOutline(shape: Shape, n = 48): [number, number][] {
   const out: [number, number][] = [];
-  if (shape === 'star') {
+  if (shape === 'sparkle') {
+    for (let i = 0; i < 8; i++) {
+      const r = i % 2 ? 0.22 : 1;
+      const a = Math.PI / 2 + (i * Math.PI) / 4;
+      out.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+  } else if (shape === 'star') {
     for (let i = 0; i < 10; i++) {
       const r = i % 2 ? 0.45 : 1;
       const a = Math.PI / 2 + (i * Math.PI) / 5;
