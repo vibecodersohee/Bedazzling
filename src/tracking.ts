@@ -84,6 +84,9 @@ export class Tracker {
         this.hbuf[i * 3 + 2] = h[i].z;
       }
       hand = this.handF.filter(this.hbuf, t);
+    } else if (this.lastHandOut && nowMs - this.lastHand < CONFIG.gestures.handLostGraceMs) {
+      // Pinching often hides fingers for a frame or two: keep the last pose instead of dropping the grab.
+      hand = this.lastHandOut;
     }
     this.lastHandOut = hand;
     return { face, hand };

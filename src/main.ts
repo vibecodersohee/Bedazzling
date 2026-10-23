@@ -337,6 +337,7 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
     g.lift = true;
     snapToFace(g, x, y);
     drag = { gem: g, existing: false };
+    audio.grab();
     return;
   }
   if (source === 'hand') {
@@ -357,6 +358,7 @@ function press(x: number, y: number, source: 'mouse' | 'hand') {
     gems.splice(gems.indexOf(hit), 1);
     drag = { gem: hit, existing: true, prev: { mode: hit.mode, tri: hit.tri, b: hit.b } };
     hit.lift = true;
+    audio.grab();
     return;
   }
   if (tool === 'brush') {
@@ -666,9 +668,10 @@ function frame(now: number) {
   // LCD
   if (phase === 'decorate') {
     let text = lcdOverride && now < lcdUntil ? lcdOverride : '';
-    if (!text) text = !faceOK ? 'Show your face' : !gestures.state.present ? 'Raise a hand · or use the mouse' : `${gems.length} gems · ${Math.round(fps)} fps`;
+    if (!text) text = !faceOK ? 'Show your face' : !gestures.state.present ? 'Raise a hand or use the mouse' : '';
     $('lcdText').textContent = text;
     const p = gestures.state.thumbsUpProgress;
+    $('lcd').classList.toggle('hidden', !text && p <= 0); // nothing to say: hide the tooltip
     $('thumbBar').style.display = p > 0 ? 'block' : 'none';
     ($('thumbBar').firstElementChild as HTMLElement).style.width = p * 100 + '%';
   }
@@ -779,3 +782,24 @@ if (demo) {
     layout();
   });
 }
+
+// ---------------------------------------------------------------- debug panel (press D, or add ?debug)
+const dbgEl = document.createElement('pre');
+dbgEl.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2000;margin:0;padding:8px 10px;background:rgba(0,0,0,.75);color:#7CFF9B;font:13px/1.4 monospace;border-radius:6px;pointer-events:none;display:none';
+document.body.appendChild(dbgEl);
+let dbgOn = new URLSearchParams(location.search).has('debug');
+addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'd') dbgOn = !dbgOn; });
+setInterval(() => {
+  dbgEl.style.display = dbgOn ? 'block' : 'none';
+  if (!dbgOn || !gestures) return;
+  const h = gestures.state, d = gestures.dbg;
+  const G = CONFIG.gestures;
+  const bar = (v: number) => '#'.repeat(Math.max(0, Math.min(20, Math.round(v * 20)))).padEnd(20, '.');
+  dbgEl.textContent =
+    `hand     ${h.present ? 'yes' : 'NO'}\n` +
+    `pinch    ${d.pinchD.toFixed(2)}  [${bar(d.pinchD)}]\n` +
+    `engage<  ${G.pinchEngage}   release>  ${G.pinchRelease}\n` +
+    `PINCHING ${h.pinching ? 'YES' : 'no'}   fistLike ${d.fistLike ? 'yes' : 'no'}   index ${d.idx.toFixed(2)}\n` +
+    `pointing ${h.pointing ? 'yes' : 'no'}   tool ${tool}   holding ${drag ? 'GEM' : 'no'}\n` +
+    `cursor   ${Math.round(pointer.x)},${Math.round(pointer.y)}   fps ${Math.round(fps)}`;
+}, 100);

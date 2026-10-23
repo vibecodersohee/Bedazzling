@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit (what changed, why, what to check next).
 
+## 2026-10-23 · Pinch debugging, grab sound, quieter status panel
+- **Debug panel** (press D or `?debug`): live pinch distance vs thresholds, pinching/fist state, tool, holding, cursor, fps. Use it to tune `pinchEngage` / `pinchRelease` in `src/config.ts`.
+- **Hand-loss grace**: the tracker keeps the last hand pose for 300 ms when detection blinks out (pinching hides fingers), so grabs aren't dropped (`handLostGraceMs`).
+- **Grab sound**: short rising blip when a gem is picked up (tray or face); sparkle still plays on drop.
+- Status panel no longer shows gem count / fps; it hides when there is nothing to say.
+- **Check next**: what the debug panel reads when a pinch fails (see DEVLOG 2026-10-22 notes).
+
 ## 2026-10-22 · Figma UI, 1-cut frames, gesture tuning
 - Removed the three reference `Selfie time - Frame*.png` exports from the repo root (app frames live in `public/assets/frames/`).
 - **Figma design implemented** (design system + screens): glossy gel buttons with hover/pressed/disabled states, pixel-icon pattern backgrounds, pixelarticons icons, Tools / Colors / Gems panels, tooltip, music button. UI is authored at 1920x1080 and scaled to fit; camera now covers the full window.

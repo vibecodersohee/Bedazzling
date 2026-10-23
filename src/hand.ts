@@ -18,6 +18,8 @@ const WRIST = 0;
 
 export class HandGestures {
   state: HandState = { present: false, x: 0.5, y: 0.5, pinching: false, pointing: false, fist: false, thumbsUpProgress: 0, events: [] };
+  /** live numbers for the debug panel */
+  dbg = { pinchD: 0, fistLike: false, idx: 0, size: 0 };
   private pinching = false;
   private pointRawSince = 0;
   private fistSince = 0;
@@ -68,6 +70,7 @@ export class HandGestures {
       this.pinching = true;
     }
     s.pinching = this.pinching;
+    this.dbg = { pinchD, fistLike, idx, size };
 
     // Cursor: index fingertip, drifting to the thumb/index midpoint as a pinch closes (steadier grabbing).
     const w = Math.min(1, Math.max(0, (pinchD - 0.2) / 0.3));

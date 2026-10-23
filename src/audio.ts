@@ -134,6 +134,13 @@ export class Audio {
     this.ensureOneShot();
     this.tone(this.ctx!.currentTime, 880, 0.08, 'sine', 0.12);
   }
+  /** short rising blip: "got it" when a gem is picked up */
+  grab() {
+    this.ensureOneShot();
+    const t = this.ctx!.currentTime;
+    this.tone(t, 520, 0.07, 'square', 0.09, 780);
+    this.tone(t + 0.06, 1040, 0.09, 'triangle', 0.08);
+  }
   sparkle() {
     this.ensureOneShot();
     const t = this.ctx!.currentTime;

@@ -18,6 +18,7 @@ export const CONFIG = {
     swipeCooldownMs: 500,
     swipeOpenRatio: 1.35, // fingertip/knuckle distance from wrist to count a finger as open
     swipeStraight: 1.6, // how much more vertical than horizontal the sweep must be
+    handLostGraceMs: 300, // keep the last hand pose this long when detection blinks out
     dwellMs: 2000, // hover over a button this long to press it without pinching
     modeConfirmMs: 150,
     fistHoldMs: 500,
