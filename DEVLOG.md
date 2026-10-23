@@ -2,6 +2,11 @@
 
 Newest first. One entry per commit (what changed, why, what to check next).
 
+## 2026-10-23 · Prepare for GitHub Pages
+- Vite `base` now comes from `VITE_BASE` (set by the workflow to `/<repo-name>/`), `.github/workflows/deploy.yml` builds and deploys to GitHub Pages on every push to `main`, README added.
+- Vercel was the first choice but account creation failed, so GitHub Pages it is (needs a public repo on the free plan).
+- **Check next**: friends' feedback; use the D debug panel to report pinch problems.
+
 ## 2026-10-23 · Pinch debugging, grab sound, quieter status panel
 - **Debug panel** (press D or `?debug`): live pinch distance vs thresholds, pinching/fist state, tool, holding, cursor, fps. Use it to tune `pinchEngage` / `pinchRelease` in `src/config.ts`.
 - **Hand-loss grace**: the tracker keeps the last hand pose for 300 ms when detection blinks out (pinching hides fingers), so grabs aren't dropped (`handLostGraceMs`).

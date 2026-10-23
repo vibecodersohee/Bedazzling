@@ -776,7 +776,7 @@ if (demo) {
     selFrame = m.frames[0];
     if (demo === 'setup') buildSetup();
     if (demo === 'result') {
-      ($('resultImg') as HTMLImageElement).src = '/assets/frames/phone.png';
+      ($('resultImg') as HTMLImageElement).src = import.meta.env.BASE_URL + 'assets/frames/phone.png';
     }
     setPhase(demo);
     layout();
