@@ -2,7 +2,7 @@
 
 Decorate your face with rhinestones using hand gestures, then take a framed selfie. Everything runs in your browser; no video or photos are uploaded.
 
-**Try it:** desktop Chrome with a webcam. Allow camera access when asked.
+**Try it:** https://vibecodersohee.github.io/Bedazzling/ (desktop Chrome with a webcam; allow camera access when asked).
 
 - Pinch a gem and drag it onto your face. Point (Brush tool) to draw with gems.
 - Open hand swipe up/down changes color. Fist = undo. Thumbs up = take selfie.

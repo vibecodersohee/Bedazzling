@@ -4,6 +4,7 @@ Newest first. One entry per commit (what changed, why, what to check next).
 
 ## 2026-10-23 · Prepare for GitHub Pages
 - Vite `base` now comes from `VITE_BASE` (set by the workflow to `/<repo-name>/`), `.github/workflows/deploy.yml` builds and deploys to GitHub Pages on every push to `main`, README added.
+- **Live** at https://vibecodersohee.github.io/Bedazzling/ (link added to README). First workflow run failed only because Pages was not enabled yet; re-running fixed it.
 - Vercel was the first choice but account creation failed, so GitHub Pages it is (needs a public repo on the free plan).
 - **Check next**: friends' feedback; use the D debug panel to report pinch problems.
 
