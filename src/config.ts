@@ -13,17 +13,11 @@ export const CONFIG = {
   gestures: {
     pinchEngage: 0.42, // thumb-index distance / hand size
     pinchRelease: 0.62,
-    swipeDistance: 0.15, // fraction of screen height, open hand
-    swipeWindowMs: 500,
-    swipeCooldownMs: 500,
-    swipeOpenRatio: 1.35, // fingertip/knuckle distance from wrist to count a finger as open
-    swipeStraight: 1.6, // how much more vertical than horizontal the sweep must be
     handLostGraceMs: 300, // keep the last hand pose this long when detection blinks out
+    touchMs: 180, // index finger resting on a button / gem this long counts as a touch
     dwellMs: 2000, // hover over a button this long to press it without pinching
     modeConfirmMs: 150,
-    fistHoldMs: 500,
     thumbsUpHoldMs: 1000,
-    undoCooldownMs: 900,
   },
   face: { lostMs: 600 },
   gems: {

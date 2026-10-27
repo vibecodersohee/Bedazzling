@@ -1,6 +1,6 @@
 import { CONFIG } from './config';
 
-export type HandEvent = 'undo' | 'done' | 'swipeUp' | 'swipeDown';
+export type HandEvent = 'done';
 export interface HandState {
   present: boolean;
   /** Cursor in mirrored normalized image space (0..1). */
@@ -22,11 +22,8 @@ export class HandGestures {
   dbg = { pinchD: 0, fistLike: false, idx: 0, size: 0 };
   private pinching = false;
   private pointRawSince = 0;
-  private fistSince = 0;
-  private fistFired = false;
   private thumbSince = 0;
   private thumbFired = false;
-  private lastUndo = -1e9;
   private trail: { t: number; x: number; y: number }[] = [];
   private lastSwipe = -1e9;
   constructor(private aspect: number) {}
@@ -46,8 +43,8 @@ export class HandGestures {
       s.pointing = false;
       s.fist = false;
       s.thumbsUpProgress = 0;
-      this.pointRawSince = this.fistSince = this.thumbSince = 0;
-      this.fistFired = this.thumbFired = false;
+      this.pointRawSince = this.thumbSince = 0;
+      this.thumbFired = false;
       return s;
     }
     s.present = true;
@@ -84,20 +81,7 @@ export class HandGestures {
     } else this.pointRawSince = 0;
     s.pointing = pointRaw && now - this.pointRawSince >= G.modeConfirmMs;
 
-    // Fist => undo (hold).
-    const isFist = fistLike && !this.pinching;
-    s.fist = isFist;
-    if (isFist) {
-      if (!this.fistSince) this.fistSince = now;
-      if (!this.fistFired && now - this.fistSince >= G.fistHoldMs && now - this.lastUndo > G.undoCooldownMs) {
-        this.fistFired = true;
-        this.lastUndo = now;
-        s.events.push('undo');
-      }
-    } else {
-      this.fistSince = 0;
-      this.fistFired = false;
-    }
+    s.fist = fistLike && !this.pinching; // no undo gesture any more; Undo is a button
 
     // Thumbs up => done (hold with progress).
     const isThumbs = allCurled && thumbUp;
@@ -115,22 +99,6 @@ export class HandGestures {
     }
 
 
-    // Swipe: open flat hand sweeping up or down the screen.
-    const openCount = [idx, mid, ring, pinky].filter((r) => r > G.swipeOpenRatio).length;
-    const open = openCount >= 3; // mostly open hand
-    if (open && !this.pinching) {
-      this.trail.push({ t: now, x: 1 - l[9 * 3], y: l[9 * 3 + 1] });
-      while (this.trail.length && now - this.trail[0].t > G.swipeWindowMs) this.trail.shift();
-      const a = this.trail[0];
-      const b = this.trail[this.trail.length - 1];
-      const dy = b.y - a.y; // fraction of screen height (down is positive)
-      const dx = (b.x - a.x) * this.aspect; // same units as dy
-      if (now - this.lastSwipe > G.swipeCooldownMs && Math.abs(dy) > G.swipeDistance && Math.abs(dy) > G.swipeStraight * Math.abs(dx)) {
-        this.lastSwipe = now;
-        this.trail = [];
-        s.events.push(dy > 0 ? 'swipeDown' : 'swipeUp');
-      }
-    } else this.trail = [];
     return s;
   }
 }

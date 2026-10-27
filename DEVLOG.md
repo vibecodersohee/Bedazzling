@@ -2,6 +2,13 @@
 
 Newest first. One entry per commit (what changed, why, what to check next).
 
+## 2026-10-27 · Touch to click, new Gems layout, simpler gestures
+- **Touch = click**: resting the index fingertip on a button for ~0.2 s presses it (also when the thumb is tucked and it reads as a pinch). Color chips select instantly with no hover state. Open-hand hover still needs 2 s. `touchMs` in `src/config.ts`.
+- **Gems by touch**: touching a shape picks up a new gem that follows the fingertip; it drops where the fingertip was ~0.25 s before the finger stopped pointing (relaxing the finger moves the cursor, which used to throw gems off the face). Placed gems are not re-grabbed by pointing; dropping a picked-up gem off the face puts it back.
+- **Removed**: swipe-to-change-color, fist-to-undo, Clear button, Hand tracking toggle (overlay code is kept but hidden).
+- **UI from Figma**: Size and Shape are two panels at the bottom center (only for the Gems tool), Colors show all 8 with no scrolling, Selfie top right, Music panel (checkbox + track) bottom right on every page, music on by default, 2x2 Gesture guide.
+- **Check next**: do touch presses feel reliable with a real hand? Friends' feedback.
+
 ## 2026-10-23 · Prepare for GitHub Pages
 - Vite `base` now comes from `VITE_BASE` (set by the workflow to `/<repo-name>/`), `.github/workflows/deploy.yml` builds and deploys to GitHub Pages on every push to `main`, README added.
 - **Live** at https://vibecodersohee.github.io/Bedazzling/ (link added to README). First workflow run failed only because Pages was not enabled yet; re-running fixed it.

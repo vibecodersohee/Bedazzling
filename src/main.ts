@@ -6,6 +6,7 @@ import { Stage } from './stage';
 import { COLORS, GemLayer, SHAPES, Shape, Gem, makeGem, resolveColor, SizeKey } from './gems';
 import { HandGestures } from './hand';
 import { Audio, TRACKS } from './audio';
+import { HandLandmarker } from '@mediapipe/tasks-vision';
 import { Frame, Manifest, composeFrame, cropToAspect, loadManifest, windowAspect } from './compose';
 import iconUndo from 'pixelarticons/svg/undo.svg?raw';
 import iconHelp from 'pixelarticons/svg/circle-question.svg?raw';
@@ -24,11 +25,12 @@ import iconHeart from 'pixelarticons/svg/heart.svg?raw';
 import iconCircle from 'pixelarticons/svg/circle.svg?raw';
 import iconStar from 'pixelarticons/svg/star.svg?raw';
 import iconSparkle from 'pixelarticons/svg/sparkle.svg?raw';
+import iconHand from 'pixelarticons/svg/hand.svg?raw';
 
 const ICONS: Record<string, string> = {
   undo: iconUndo, 'circle-question': iconHelp, trash: iconTrash, eraser: iconEraser, brush: iconBrush, 'diamond-gem': iconGem,
   'volume-2': iconVolOn, 'volume-x': iconVolOff, 'chevron-up': iconUp, 'chevron-down': iconDown, checkbox: iconCheckbox,
-  'checkbox-on': iconCheckboxOn, camera: iconCamera, heart: iconHeart, circle: iconCircle, star: iconStar, sparkle: iconSparkle,
+  'checkbox-on': iconCheckboxOn, camera: iconCamera, heart: iconHeart, circle: iconCircle, star: iconStar, sparkle: iconSparkle, hand: iconHand,
 };
 function injectIcons(root: ParentNode = document) {
   root.querySelectorAll<HTMLElement>('[data-icon]').forEach((el) => {
@@ -61,6 +63,9 @@ let VH = CONFIG.video.height;
 let gems: Gem[] = [];
 let falling: Gem[] = [];
 const history: (() => void)[] = [];
+let dropTrail: { t: number; mode: Gem['mode']; tri: number; b: [number, number, number]; pos: Gem['pos'] }[] = [];
+let notPointingSince = 0; // when the fingertip stopped pointing (drops need a short grace)
+let touchDrag = false; // gem held by the fingertip (index touch) instead of a pinch
 let drag: { gem: Gem; existing: boolean; prev?: { mode: Gem['mode']; tri: number; b: [number, number, number] } } | null = null;
 let stroke: number[] | null = null;
 let strokeSource: 'hand' | 'mouse' | null = null;
@@ -98,8 +103,7 @@ function setPhase(p: Phase) {
   show('result', p === 'result');
   show('error', p === 'error');
   show('hud', p === 'decorate');
-  if (p === 'decorate') updateChevrons();
-  show('musicBtn', p !== 'landing' && p !== 'capture' && p !== 'error');
+  show('musicSetting', p !== 'capture'); // same Music panel on every page
   $('cropmask').style.display = p === 'capture' ? 'block' : 'none';
   if (p !== 'capture') $('countdown').textContent = '';
 }
@@ -118,6 +122,9 @@ function layout() {
   stageEl.style.height = VH * f + 'px';
   stageEl.style.left = (aw - VW * f) / 2 + 'px';
   stageEl.style.top = (ah - VH * f) / 2 + 'px';
+  const hv = $<HTMLCanvasElement>('handviz');
+  hv.width = Math.round(VW * f);
+  hv.height = Math.round(VH * f);
   stage?.updateRect();
   if (phase === 'capture') placeCropMask();
 }
@@ -162,33 +169,18 @@ function buildTray() {
   injectIcons(sg);
   markTray();
 }
-function scrollColorIntoView() {
-  const list = $('colorList');
-  const b = list.querySelector<HTMLElement>('.colbtn.on');
-  if (b) list.scrollTo({ top: b.offsetTop - list.offsetTop - list.clientHeight / 2 + 24, behavior: 'smooth' });
-}
 function markTray() {
-  document.querySelectorAll<HTMLElement>('.gembtn').forEach((b) => b.classList.toggle('on', b.dataset.shape === sel.shape));
-  document.querySelectorAll<HTMLElement>('.colbtn').forEach((b) => b.classList.toggle('on', b.dataset.color === sel.color));
   document.querySelectorAll<HTMLElement>('[data-size]').forEach((b) => b.classList.toggle('on', b.dataset.size === sel.size));
-  scrollColorIntoView();
+  document.querySelectorAll<HTMLElement>('.colbtn').forEach((b) => b.classList.toggle('on', b.dataset.color === sel.color));
 }
-function updateChevrons() {
-  const l = $('colorList');
-  ($('colUp') as HTMLButtonElement).disabled = l.scrollTop <= 1;
-  ($('colDown') as HTMLButtonElement).disabled = l.scrollTop + l.clientHeight >= l.scrollHeight - 2;
-}
-$('colorList').addEventListener('scroll', updateChevrons);
-$('colUp').onclick = () => $('colorList').scrollBy({ top: -180, behavior: 'smooth' });
-$('colDown').onclick = () => $('colorList').scrollBy({ top: 180, behavior: 'smooth' });
 const TOOL_HINT: Record<Tool, string> = {
-  gem: 'Pinch a gem, drop it on your face',
+  gem: 'Touch a gem, drop it by lowering your finger',
   brush: 'Point (or drag) over your face',
-  eraser: 'Pinch a gem to remove it',
+  eraser: 'Point at a gem to remove it',
 };
 function setTool(t: Tool) {
   tool = t;
-  show('gemPanel', t !== 'brush'); // the brush scatters its own gems, so no gem picker
+  show('gemPanel', t === 'gem'); // brush and eraser don't use the size / shape pickers
   if (phase === 'decorate') say(TOOL_HINT[t], 3000);
   document.querySelectorAll<HTMLElement>('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
 }
@@ -203,6 +195,7 @@ function capReached() {
   }
   return false;
 }
+let lastAnchor: { tri: number; b: [number, number, number]; t: number } | null = null; // where the held gem last touched the face
 function snapToFace(g: Gem, sx: number, sy: number): boolean {
   stage.screenToWorld(sx, sy, tmp);
   const h = stage.hitFace(tmp.x, tmp.y);
@@ -210,6 +203,7 @@ function snapToFace(g: Gem, sx: number, sy: number): boolean {
     g.mode = 'anchored';
     g.tri = h.tri;
     g.b = h.b;
+    lastAnchor = { tri: h.tri, b: h.b, t: performance.now() };
     return true;
   }
   g.mode = 'free';
@@ -248,22 +242,6 @@ function burstAt(g: Gem) {
   else c.copy(g.pos);
   stage.burst(c, 6, g.color);
   audio.sparkle();
-}
-function cycleColor(d: number) {
-  const i = (COLOR_KEYS.indexOf(sel.color) + d + COLOR_KEYS.length) % COLOR_KEYS.length;
-  sel.color = COLOR_KEYS[i];
-  markTray();
-  say(COLORS[sel.color].label, 1500);
-  audio.sparkle();
-}
-function clearAll() {
-  if (drag || !gems.length) { say('Nothing to clear'); return; }
-  const old = gems;
-  gems = [];
-  stage.burst(new THREE.Vector3(0, 0, 0), 12);
-  audio.sparkle();
-  history.push(() => { gems = old.concat(gems); });
-  say('Cleared. Undo brings them back', 3500);
 }
 function undo() {
   const f = history.pop();
@@ -376,20 +354,27 @@ function move(x: number, y: number) {
 }
 function release() {
   erasing = false;
+  touchDrag = false;
+  dropTrail = [];
   if (stroke && strokeSource === 'mouse') endStroke();
   if (!drag) return;
   const { gem, existing, prev } = drag;
   drag = null;
   gem.lift = false;
+  // Tracking jitter can push the fingertip just off the face as it lets go: use the last spot it was on the face.
+  if (gem.mode !== 'anchored' && lastAnchor && performance.now() - lastAnchor.t < 400) {
+    gem.mode = 'anchored'; gem.tri = lastAnchor.tri; gem.b = lastAnchor.b;
+  }
+  lastAnchor = null;
   if (gem.mode === 'anchored') {
     gems.push(gem);
     burstAt(gem);
     if (existing && prev) history.push(() => { gems = gems.filter((g) => g !== gem); gem.mode = prev.mode; gem.tri = prev.tri; gem.b = prev.b; gems.push(gem); });
     else history.push(() => { gems = gems.filter((g) => g !== gem); });
   } else if (existing && prev) {
-    // dragged off the face: pop
-    burstAt(gem);
-    history.push(() => { gem.mode = prev.mode; gem.tri = prev.tri; gem.b = prev.b; gems.push(gem); });
+    // dropped off the face: the gem goes back where it was (gems are removed with Erase or Undo)
+    gem.mode = prev.mode; gem.tri = prev.tri; gem.b = prev.b;
+    gems.push(gem);
   }
 }
 
@@ -415,8 +400,6 @@ addEventListener('keydown', (e) => {
   if (phase !== 'decorate') return;
   if (e.key.toLowerCase() === 'z') undo();
   if (e.key === 'Enter') finishDecorate();
-  if (e.key === 'ArrowDown') cycleColor(1);
-  if (e.key === 'ArrowUp') cycleColor(-1);
 });
 
 // ---------------------------------------------------------------- selfie flow
@@ -500,7 +483,6 @@ document.addEventListener('click', (e) => {
   setTimeout(() => b.classList.remove('pressed'), 280);
 });
 $('undo').onclick = undo;
-$('clearAll').onclick = clearAll;
 $('done').onclick = finishDecorate;
 
 // ---------------------------------------------------------------- music UI
@@ -530,6 +512,45 @@ function updateMusicBtn() {
   injectIcons(b);
 }
 updateMusicBtn();
+
+// ---------------------------------------------------------------- hand tracking overlay (white skeleton, toggle)
+let handViz = false;
+let lastHandLm: Float32Array | null = null;
+const vizCanvas = $<HTMLCanvasElement>('handviz');
+const vizCtx = vizCanvas.getContext('2d')!;
+function setHandViz(on: boolean) {
+  handViz = on;
+  if (!on) vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
+}
+// Hidden for now: no button or key. To bring it back, call setHandViz(true) / add a toggle.
+function drawHandViz() {
+  const { width: w, height: h } = vizCanvas;
+  vizCtx.clearRect(0, 0, w, h);
+  if (!handViz || !lastHandLm || !gestures?.state.present || (phase !== 'decorate' && phase !== 'check')) return;
+  const l = lastHandLm;
+  const px = (i: number) => (1 - l[i * 3]) * w; // mirrored like the camera
+  const py = (i: number) => l[i * 3 + 1] * h;
+  const k = w / 1280;
+  vizCtx.save();
+  vizCtx.strokeStyle = '#fff';
+  vizCtx.fillStyle = '#fff';
+  vizCtx.lineWidth = 3 * k;
+  vizCtx.lineCap = 'round';
+  vizCtx.shadowColor = 'rgba(0,0,0,.55)';
+  vizCtx.shadowBlur = 6 * k;
+  vizCtx.beginPath();
+  for (const { start, end } of HandLandmarker.HAND_CONNECTIONS) {
+    vizCtx.moveTo(px(start), py(start));
+    vizCtx.lineTo(px(end), py(end));
+  }
+  vizCtx.stroke();
+  for (let i = 0; i < 21; i++) {
+    vizCtx.beginPath();
+    vizCtx.arc(px(i), py(i), (i % 4 === 0 && i > 0 ? 5.5 : 4) * k, 0, Math.PI * 2); // fingertips a bit bigger
+    vizCtx.fill();
+  }
+  vizCtx.restore();
+}
 
 // ---------------------------------------------------------------- boot
 let handDriving = false;
@@ -607,13 +628,11 @@ function enterDecorate() {
 }
 $('guideOk').onclick = closeGuide;
 $('help').onclick = openGuide;
-let swipeFlash = 0;
 function lightGuide(hs: ReturnType<HandGestures['update']>, now: number) {
-  if (hs.events.some((e) => e === 'swipeUp' || e === 'swipeDown')) swipeFlash = now + 800;
   const on: Record<string, boolean> = {
     'gc-tool': !!document.querySelector('.btn.hover'),
-    'gc-pinch': hs.pinching, 'gc-point': hs.pointing, 'gc-fist': hs.fist,
-    'gc-thumb': hs.thumbsUpProgress > 0, 'gc-swipe': now < swipeFlash,
+    'gc-pinch': hs.pinching, 'gc-point': hs.pointing,
+    'gc-thumb': hs.thumbsUpProgress > 0,
   };
   for (const k in on) $(k).classList.toggle('live', on[k]);
 }
@@ -633,6 +652,7 @@ function frame(now: number) {
       stage.setFace(r.face);
       lastFaceT = now;
     }
+    lastHandLm = r.hand;
     const hs = gestures.update(r.hand, now);
     handPresent = hs.present;
     if (phase === 'decorate' || phase === 'setup' || phase === 'result' || phase === 'guide') handleHand(hs);
@@ -680,6 +700,7 @@ function frame(now: number) {
   const list = drag ? gems.concat(falling, drag.gem) : gems.concat(falling);
   layer.update(list, stage);
   stage.render(dt);
+  drawHandViz();
 }
 
 function handleHand(hs: ReturnType<HandGestures['update']>) {
@@ -687,7 +708,7 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   handDriving = hs.present;
   if (!hs.present) {
     cur.classList.add('hidden');
-    if (wasPinch) { release(); wasPinch = false; }
+    if (wasPinch || touchDrag) { release(); wasPinch = false; }
     if (strokeSource === 'hand') endStroke();
     return;
   }
@@ -702,7 +723,8 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
 
   // hover highlight
   document.querySelectorAll('.hover').forEach((e) => e.classList.remove('hover'));
-  targetAt(px, py)?.closest('button')?.classList.add('hover');
+  const hb = targetAt(px, py)?.closest('button');
+  if (hb && !hb.dataset.color) hb.classList.add('hover'); // color chips have no hover state
 
   // Dwell: hold the cursor over ANY button (no pinch needed) to press it.
   const nowMs = performance.now();
@@ -712,22 +734,51 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   else if (dwellEl && nowMs - dwellSeen < 250) tgt = dwellEl; // forgive brief jitter off the edge
   if (tgt !== dwellEl) { dwellEl = tgt; dwellStart = nowMs; }
   if (dwellDone && tgt !== dwellDone) dwellDone = null;
+  // Index finger out OR thumb tucked against it (that reads as a pinch): resting on a button counts as a click.
+  const touching = hs.pointing || hs.pinching;
   let prog = 0;
   if (tgt && !drag && !stroke && tgt !== dwellDone) {
-    prog = Math.min(1, (nowMs - dwellStart) / CONFIG.gestures.dwellMs);
+    const need = touching ? (tgt.dataset.color ? 0 : CONFIG.gestures.touchMs) : CONFIG.gestures.dwellMs;
+    prog = Math.min(1, (nowMs - dwellStart) / need);
     if (prog >= 1) {
       dwellDone = tgt;
       prog = 0;
-      if (tgt.dataset.shape) { // gem shapes: dwell selects (dragging a gem needs a pinch)
+      if (tgt.dataset.shape && !touching) { // open hand: dwell only selects (dragging needs a touch or pinch)
         sel.shape = tgt.dataset.shape as Shape;
         markTray();
-        say('Pinch and drag to place it', 2500);
-      } else press(px, py, 'hand');
+        say('Touch or pinch the gem and drag it', 2500);
+      } else {
+        press(px, py, 'hand');
+        if (drag) touchDrag = !hs.pinching;
+      }
+    }
+  }
+  // A gem held by the fingertip follows it; it drops when the finger stops pointing.
+  if (touchDrag && drag) {
+    const g = drag.gem;
+    if (hs.pointing || hs.pinching) {
+      notPointingSince = 0;
+      move(px, py);
+      // remember where the gem was, so a drop can use the spot from just before the finger relaxed
+      dropTrail.push({ t: nowMs, mode: g.mode, tri: g.tri, b: g.b, pos: g.pos.clone() });
+      while (dropTrail.length && nowMs - dropTrail[0].t > 800) dropTrail.shift();
+    } else if (!notPointingSince) notPointingSince = nowMs;
+    if (notPointingSince && nowMs - notPointingSince > 350) {
+      // Relaxing the finger moves the fingertip, so drop where it was ~0.25s before it stopped pointing.
+      const at = dropTrail.find((s) => s.t >= notPointingSince - 250) ?? dropTrail[dropTrail.length - 1];
+      if (at) { g.mode = at.mode; g.tri = at.tri; g.b = at.b; g.pos.copy(at.pos); lastAnchor = null; }
+      notPointingSince = 0;
+      dropTrail = [];
+      release();
+      wasPinch = hs.pinching;
+      return;
     }
   }
   cur.style.setProperty('--p', String(prog));
 
-  if (hs.pinching && !wasPinch) {
+  if (hs.pinching && !wasPinch && drag) {
+    touchDrag = false; // pinching while holding a gem: the pinch takes over
+  } else if (hs.pinching && !wasPinch) {
     if (tgt) dwellDone = tgt; // a pinch-press must not be followed by a dwell-press
     press(px, py, 'hand');
     pinchUsed = !!(drag || stroke || erasing || tgt);
@@ -739,7 +790,7 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
       pinchUsed = true;
     } else move(px, py);
   } else {
-    if (wasPinch) release();
+    if (wasPinch && !touchDrag) release();
     pinchUsed = false;
   }
   wasPinch = hs.pinching;
@@ -757,10 +808,7 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
   } else if (strokeSource === 'hand') endStroke();
 
   for (const ev of hs.events) {
-    if (ev === 'undo') undo();
-    else if (ev === 'done') finishDecorate();
-    else if (ev === 'swipeDown') cycleColor(1);
-    else if (ev === 'swipeUp') cycleColor(-1);
+    if (ev === 'done') finishDecorate();
   }
 }
 

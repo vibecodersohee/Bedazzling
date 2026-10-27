@@ -46,7 +46,7 @@ Gen-Z users on a laptop or desktop with a webcam who enjoy beauty and nostalgia 
 | 2 cut layout | Two photos stacked vertically |
 | Backgrounds | User picks a background for the photo (like a collage board with stamp frames, bows, butterflies) |
 | Finish gesture | Thumbs up held for 1 second, with a Done button as fallback |
-| Fun feature | None for now. Finger snap was removed in v0.3 because it was confusing next to pinch. A Clear all button replaced it |
+| Fun feature | None for now. Finger snap was removed in v0.3 because it was confusing next to pinch |
 | Onboarding | Gesture guide screen on first Decorate, reopen with the Help button (v0.3) |
 | Pressing buttons by hand | Pinch, or hold the cursor over a button about 1 second (dwell) (v0.3) |
 | Music | 3 Y2K style background tracks, user can turn on and off. v0.3 uses synthesized loops, no licensed files |
@@ -90,8 +90,9 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 ### 7.1 Layout
 - The live camera fills the screen and is mirrored.
 - Gems panel sits bottom center: size pills (Small, Medium, Large) above four shape buttons (circle, sparkle, heart, star).
-- Colors panel on the right is a vertical scrolling list with up and down chevrons (8 colors from the design system). Swiping changes the color too.
-- A tool bar on the left holds Gem, Brush, Eraser, Undo, Clear all, Help and Done. Clear all is undoable. Buttons are large enough to hit with a pinch.
+- Colors panel on the right shows all 8 colors in a column (no scrolling). Colors are chosen only by hovering and touching/pinching a chip; no swipe gesture. Bottom center has two panels, Size (selected state) and Shape (no selected state; touching or pinching a shape grabs a gem). Tools Gems/Brush/Erase, Size and Colors show pressed/selected; Undo is a one-shot click. Hand-tracking overlay exists in code but is hidden until requested.
+- A tool bar on the left holds Gems, Brush, Erase and Undo (Help and Selfie sit in the corners). There is no Clear all button. Buttons are large enough to hit with a pinch.
+- A Hand button (below the music button, or press H) toggles a white skeleton drawn over the tracked hand, so users can see what the camera sees. Off by default, remembered for the session.
 - A gesture guide shows on the first visit to Decorate. Cards light up when the matching gesture is detected.
 - A small status area shows tracking state and short messages in the LCD style (see section 9).
 - The camera area stays clean of decoration so the face is the hero.
@@ -107,8 +108,7 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 | Move a placed gem | Pinch the gem on the face, drag, release | |
 | Remove a placed gem | Pinch it, drag it off the face, release | Gem pops with a small sparkle |
 | Freehand trail | With Brush active, point with index finger only (other fingers curled) and move over the face | See 7.3 |
-| Change color | Open flat hand, sweep up or down (up/down arrow keys on keyboard) | Down = next color, up = previous. Swatches can still be pressed |
-| Undo | Closed fist held for half a second, or the Undo button | Undoes the last placement or stroke |
+| Touch (click) | Index finger rests on a button or gem ~0.2 sec; pinch also works | Touching a gem shape picks up a new gem that follows the fingertip; drop by holding still ~0.7 sec or relaxing the finger |
 | Finish | Thumbs up held for 1 second, or Done button | Show a progress ring while holding |
 
 Gesture rules:

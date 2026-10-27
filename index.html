@@ -15,6 +15,7 @@
     <div id="app">
       <div id="stage">
         <canvas id="gl"></canvas>
+        <canvas id="handviz"></canvas>
         <div id="cropmask"></div>
         <div id="flash"></div>
       </div>
@@ -31,28 +32,35 @@
           <button class="btn sq pink" data-tool="brush"><i data-icon="brush"></i><span>Brush</span></button>
           <button class="btn sq pink" data-tool="eraser"><i data-icon="eraser"></i><span>Erase</span></button>
           <button class="btn sq pink" id="undo"><i data-icon="undo"></i><span>Undo</span></button>
-          <button class="btn sq pink" id="clearAll"><i data-icon="trash"></i><span>Clear</span></button>
         </aside>
 
         <aside id="colors" class="panel colors">
           <div class="plabel">Colors</div>
-          <button class="btn pill pink chev" id="colUp" aria-label="Previous colors"><i data-icon="chevron-up"></i></button>
           <div id="colorList"></div>
-          <button class="btn pill pink chev" id="colDown" aria-label="More colors"><i data-icon="chevron-down"></i></button>
         </aside>
 
-        <aside id="gemPanel" class="panel gems">
-          <div class="plabel">Gems</div>
-          <div class="sizes">
-            <button class="btn pill pink" data-size="small">Small</button>
-            <button class="btn pill pink on" data-size="medium">Medium</button>
-            <button class="btn pill pink" data-size="large">Large</button>
-          </div>
-          <div id="shapeGrid"></div>
-        </aside>
+        <div id="gemPanel" class="gems">
+          <aside class="gbox">
+            <div class="plabel">Size</div>
+            <div class="sizes">
+              <button class="btn pill pink" data-size="small">Small</button>
+              <button class="btn pill pink on" data-size="medium">Medium</button>
+              <button class="btn pill pink" data-size="large">Large</button>
+            </div>
+          </aside>
+          <aside class="gbox">
+            <div class="plabel">Shape</div>
+            <div id="shapeGrid"></div>
+          </aside>
+        </div>
 
         <button id="done" class="btn sq grey"><i data-icon="camera"></i><span>Selfie</span></button>
       </div>
+
+      <div id="musicSetting" class="lcd music">
+          <label class="check"><input type="checkbox" id="musicOn" checked /><i class="off" data-icon="checkbox"></i><i class="on" data-icon="checkbox-on"></i>Music</label>
+          <div class="select"><select id="trackSel"></select><i data-icon="chevron-down"></i></div>
+        </div>
 
       <button id="musicBtn" class="btn pill pink hidden" title="Music"><i data-icon="volume-2"></i><span>On</span></button>
 
@@ -61,10 +69,6 @@
         <h1>Bedazzle<i data-icon="diamond-gem"></i><br />Booth<i data-icon="sparkle"></i></h1>
         <button id="start" class="btn bar pink">Start</button>
         <p class="fine">Everything runs in your browser. No video or photos leave your device.</p>
-        <div id="musicSetting" class="lcd music">
-          <label class="check"><input type="checkbox" id="musicOn" /><i class="off" data-icon="checkbox"></i><i class="on" data-icon="checkbox-on"></i>Music</label>
-          <div class="select"><select id="trackSel"></select><i data-icon="chevron-down"></i></div>
-        </div>
       </section>
 
       <section id="check" class="screen clear hidden">
@@ -78,11 +82,9 @@
         <h2 class="pixel-title dark">Gesture guide</h2>
         <p class="sub">Your hand lights up the matching card. Try them! (Mouse works too.)</p>
         <div class="cards">
-          <div class="card" id="gc-tool"><i>🤏</i><b>Select a tool</b><ul><li>Pinch a button / hover for 1 sec</li></ul></div>
-          <div class="card" id="gc-pinch"><i>🤏</i><b>Place a gem</b><ul><li>Pinch → drag → release</li><li>Remove a gem: Pinch it and drag it off your face</li></ul></div>
+          <div class="card" id="gc-tool"><i>👆</i><b>Select a tool</b><ul><li>Point + hover</li></ul></div>
+          <div class="card" id="gc-pinch"><i>🤏</i><b>Place a gem</b><ul><li>Pinch → drag → release</li></ul></div>
           <div class="card" id="gc-point"><i>☝️</i><b>Draw with gems</b><ul><li>Point + move</li></ul></div>
-          <div class="card" id="gc-swipe"><i>👋</i><b>Change color</b><ul><li>Open hand + swipe ↑ ↓</li></ul></div>
-          <div class="card" id="gc-fist"><i>✊</i><b>Undo</b><ul><li>Make a fist and hold 0.5 sec</li></ul></div>
           <div class="card" id="gc-thumb"><i>👍</i><b>Continue to selfie</b><ul><li>Thumbs up and hold 1 sec</li></ul></div>
         </div>
         <ul class="mouse"><li>Mouse: drag to place, right-click removes, Z undoes, Enter finishes</li></ul>
