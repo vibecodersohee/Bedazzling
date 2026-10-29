@@ -1,6 +1,6 @@
 # PRD: Bedazzle Booth
 
-Version 0.4 | Draft | Updated October 20, 2026
+Version 0.5 | Draft | Updated October 27, 2026
 Build tool: Claude Code, one phase at a time (see section 14)
 
 ---
@@ -48,7 +48,7 @@ Gen-Z users on a laptop or desktop with a webcam who enjoy beauty and nostalgia 
 | Finish gesture | Thumbs up held for 1 second, with a Done button as fallback |
 | Fun feature | None for now. Finger snap was removed in v0.3 because it was confusing next to pinch |
 | Onboarding | Gesture guide screen on first Decorate, reopen with the Help button (v0.3) |
-| Pressing buttons by hand | Pinch, or hold the cursor over a button about 1 second (dwell) (v0.3) |
+| Pressing buttons by hand | Touch: rest the index fingertip (or a pinch) on a button about 0.2 sec. Open hand: hover 2 sec (dwell). Color chips select instantly on touch (v0.5) |
 | Music | 3 Y2K style background tracks, user can turn on and off. v0.3 uses synthesized loops, no licensed files |
 | Visual style | Bedazzled Y2K gadget: hot pink, glossy, modern, less cute. No device frame. v0.4 implements the Figma design system and screens (Vibe-coding-projects file) |
 | Font | DotGothic16 (flip phone style pixel font) |
@@ -77,22 +77,24 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 
 ## 6. Experience flow
 
-1. **Landing and setup:** Short intro, camera permission request, music toggle (off by default), "Start" button.
+1. **Landing and setup:** Short intro, camera permission request, music setting (on by default), "Start" button.
 2. **Tracking check:** Prompt: show your face, then raise a hand. Both indicators turn green, then Decorate begins.
+   The landing page footer has "Designed by ©Sohee Lee", an Instagram icon link, a Privacy Policy link (static page at /PrivacyPolicy, `public/PrivacyPolicy/index.html`) and an About Me page (bio, LinkedIn, Instagram, email, with a Back button).
 3. **Decorate step:** Live camera, gem tray, tool bar. User places gems with gestures.
 4. **Finish:** Thumbs up held for 1 second (or Done button). Hand cursor and tray fade out.
-5. **Selfie setup:** User chooses 1 cut or 2 cuts, and a background.
-6. **Capture:** 3 second countdown, then photo. For 2 cuts, the countdown runs again for the second photo. Gems keep tracking live so the user can pose and turn.
-7. **Result:** Preview with Save as PNG, Retake, and Back to Decorate (gems are kept).
+5. **Selfie setup:** User chooses one of 3 photo frames (Pink Phone, Pink TV, Pink Cam; one cut) or No Frame (plain full camera view, 16:9).
+6. **Capture:** 3 second countdown, then photo. Gems keep tracking live so the user can pose and turn.
+7. **Result:** Preview with Save PNG, Retake and Back to decorate (gems are kept) under the photo, and a Back to frame selection button top left.
 
 ## 7. Decorate step: detailed spec
 
 ### 7.1 Layout
 - The live camera fills the screen and is mirrored.
-- Gems panel sits bottom center: size pills (Small, Medium, Large) above four shape buttons (circle, sparkle, heart, star).
-- Colors panel on the right shows all 8 colors in a column (no scrolling). Colors are chosen only by hovering and touching/pinching a chip; no swipe gesture. Bottom center has two panels, Size (selected state) and Shape (no selected state; touching or pinching a shape grabs a gem). Tools Gems/Brush/Erase, Size and Colors show pressed/selected; Undo is a one-shot click. Hand-tracking overlay exists in code but is hidden until requested.
-- A tool bar on the left holds Gems, Brush, Erase and Undo (Help and Selfie sit in the corners). There is no Clear all button. Buttons are large enough to hit with a pinch.
-- A Hand button (below the music button, or press H) toggles a white skeleton drawn over the tracked hand, so users can see what the camera sees. Off by default, remembered for the session.
+- Tools panel on the left: Gems, Brush, Erase, Undo. Gems, Brush and Erase stay pressed when selected; Undo is a one-shot click. There is no Clear all button (removed v0.5). Help is top left, Selfie top right.
+- Colors panel on the right shows all 8 colors in a column (no scrolling, no swipe gesture). The chosen color stays pressed. Chips have no hover state: touching one selects it.
+- Bottom center has two panels, Size (Small, Medium, Large; the chosen one stays pressed) and Shape (circle, sparkle, heart, star; no selected state, touching or pinching one grabs a gem). Both appear only with the Gems tool, not with Brush or Erase.
+- The Music panel (checkbox and track dropdown) sits bottom right on every page except during the photo countdown. Music is on by default and starts after the first click on Start. Mouse only for now.
+- A hand-tracking overlay (white skeleton over the hand) exists in code but is hidden; it has no button or key until requested.
 - A gesture guide shows on the first visit to Decorate. Cards light up when the matching gesture is detected.
 - A small status area shows tracking state and short messages in the LCD style (see section 9).
 - The camera area stays clean of decoration so the face is the hero.
@@ -101,20 +103,21 @@ These are recommendations for Claude Code. It can propose alternatives if it fin
 
 | Action | Gesture | Notes |
 |---|---|---|
-| Move cursor | Midpoint of thumb tip (4) and index tip (8) | Mirrored to match the camera view. Stays steady while pinching |
-| Pick a gem | Pinch over a gem in the tray | Pinch = thumb tip (4) close to index tip (8) |
-| Place a gem | Keep pinching, drag over the face, release | Gem snaps to the nearest face surface point |
-| Press a tool or button | Pinch while hovering, or hold still over it for about 1 second | Hover shows a highlight, the cursor ring fills during the hold |
-| Move a placed gem | Pinch the gem on the face, drag, release | |
-| Remove a placed gem | Pinch it, drag it off the face, release | Gem pops with a small sparkle |
+| Move cursor | Index fingertip, blending to the thumb and index midpoint as a pinch closes | Mirrored to match the camera view |
+| Press a tool or button | Touch: rest the index fingertip (or a pinch) on it about 0.2 sec. Open hand: hover about 2 sec | Hover shows a highlight; the cursor ring fills during an open-hand hover. Color chips select immediately |
+| Pick up a new gem | Touch a shape (the gem follows the fingertip), or pinch it and drag | |
+| Place a gem | Touch method: stop pointing (lower the finger). Pinch method: release the pinch | The gem lands where the fingertip was about 0.25 sec before the finger relaxed, because relaxing moves the cursor. Gem snaps to the nearest face surface point. Dropped off the face, a new gem is discarded |
+| Move a placed gem | Pinch the gem on the face, drag, release | Pointing at a placed gem does nothing, so it never gets knocked off. Dropped off the face, it returns to where it was |
+| Remove a placed gem | Erase tool (point at it), Undo, or mouse right-click | Dragging a gem off the face no longer removes it (v0.5) |
 | Freehand trail | With Brush active, point with index finger only (other fingers curled) and move over the face | See 7.3 |
-| Touch (click) | Index finger rests on a button or gem ~0.2 sec; pinch also works | Touching a gem shape picks up a new gem that follows the fingertip; drop by holding still ~0.7 sec or relaxing the finger |
-| Finish | Thumbs up held for 1 second, or Done button | Show a progress ring while holding |
+| Finish | Thumbs up held for 1 second, or Selfie button | Show a progress ring while holding |
+
+There are no gestures for changing color (swipe) or undo (fist); both were removed in v0.5.
 
 Gesture rules:
-- Pinch uses hysteresis: engage when the thumb to index distance is below about 0.36 of hand size, release when it rises above about 0.58. Hand size is wrist to middle finger base. These numbers are starting points and must be tunable in a config file.
+- Pinch uses hysteresis: engage when the thumb to index distance is below about 0.42 of hand size, release when it rises above about 0.62. Hand size is wrist to middle finger base. These numbers are starting points and must be tunable in a config file.
 - Pointing (freehand) and pinching must never trigger each other by accident. Use a short confirmation delay (about 150 ms) before switching mode.
-- Every gesture has a mouse and keyboard equivalent: click and drag to place, right click or Eraser to remove, Z to undo, Enter for Done.
+- Every gesture has a mouse and keyboard equivalent: click and drag to place, right click or Eraser to remove, Z to undo, Enter for Selfie.
 - When the hand covers the face, face tracking can become unstable. Keep existing gems locked to the last good face pose for a short time rather than letting them jump.
 
 ### 7.3 Brush (freehand trail)
@@ -190,7 +193,7 @@ Pink is the hero. Silver, white and small hits of icy blue or lilac add sparkle.
 ## 10. Audio
 
 - **3 background tracks** in a Y2K style, looped. Working moods (can change): dreamy R&B, bubbly pop, glossy club.
-- A music toggle on the setup screen (off by default, because browsers block autoplay until the user interacts) and a small persistent on/off button in a corner.
+- A Music panel (checkbox and track dropdown) bottom right on every page. On by default; sound starts after the first click on Start because browsers block autoplay.
 - Remember the user's choice for the session.
 - Lower the music volume during the countdown and play a shutter sound.
 - Keep each track short and compressed (about 1 to 2 MB) with a seamless loop.
@@ -239,7 +242,7 @@ Face mesh, invisible depth mask, click to place a round gem, store on a mesh tri
 Check: a placed gem stays on the same spot of the cheek through rotation and expression changes.
 
 **Phase 2: Hand tracking and pinch**
-Fingertip cursor, pinch with hysteresis, One Euro smoothing, pick from tray, drop on face, move and remove gems, fist for undo.
+Fingertip cursor, pinch with hysteresis, One Euro smoothing, pick from tray, drop on face, move gems. (Fist for undo was removed in v0.5.)
 Check: a gem can be placed and removed using only the hand.
 
 **Phase 3: Gem set and rendering polish**

@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bedazzle Booth</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" />
@@ -69,6 +71,26 @@
         <h1>Bedazzle<i data-icon="diamond-gem"></i><br />Booth<i data-icon="sparkle"></i></h1>
         <button id="start" class="btn bar pink">Start</button>
         <p class="fine">Everything runs in your browser. No video or photos leave your device.</p>
+        <footer id="landFoot">
+          <p>Designed by ©Sohee Lee. All Rights Reserved.</p>
+          <div class="links">
+            <a href="https://www.instagram.com/umactuallydesignis" target="_blank" rel="noopener" aria-label="Instagram"><i data-icon="instagram"></i></a>
+            <a id="privacyLink" class="textbtn" href="PrivacyPolicy/">Privacy Policy</a>
+            <button id="aboutBtn" class="textbtn">About Me</button>
+          </div>
+        </footer>
+      </section>
+
+      <section id="about" class="screen pink-bg hidden">
+        <button id="aboutBack" class="btn pill pink"><i data-icon="undo"></i><span>Back</span></button>
+        <div class="aboutbox">
+          <h2 class="pixel-title dark">About Me</h2>
+          <p>Hi, I’m Sohee, a UI/UX designer based in Toronto. I vibe code for fun and build small apps with cute graphics. If you have questions or feedback, or want to see more of my projects, come say hi on my social media!</p>
+          <h3>Get in touch</h3>
+          <a href="https://www.linkedin.com/in/soheedsgn/" target="_blank" rel="noopener"><i data-icon="linkedin"></i><u>https://www.linkedin.com/in/soheedsgn/</u></a>
+          <a href="https://www.instagram.com/umactuallydesignis" target="_blank" rel="noopener"><i data-icon="instagram"></i><u>https://www.instagram.com/umactuallydesignis</u></a>
+          <a href="mailto:sohee.dsgn@gmail.com"><i data-icon="mail"></i><u>sohee.dsgn@gmail.com</u></a>
+        </div>
       </section>
 
       <section id="check" class="screen clear hidden">
@@ -92,15 +114,21 @@
       </section>
 
       <section id="setup" class="screen pink-bg hidden">
-        <h2 class="pixel-title dark">Selfie time</h2>
-        <div class="row" id="framePick"></div>
-        <div class="row">
-          <button id="setupBack" class="btn sq grey small">Back</button>
-          <button id="takePhoto" class="btn bar pink" disabled>Take photo</button>
+        <div class="setupbox">
+          <div class="titles">
+            <h2 class="pixel-title dark">Selfie time</h2>
+            <p>Select a frame!</p>
+          </div>
+          <div class="row" id="framePick"></div>
+          <div class="row">
+            <button id="setupBack" class="btn bar grey">Back to decorate</button>
+            <button id="takePhoto" class="btn bar pink" disabled>Take photo</button>
+          </div>
         </div>
       </section>
 
       <section id="result" class="screen pink-bg hidden">
+        <button id="backFrame" class="btn pill pink">Back to frame selection</button>
         <img id="resultImg" alt="Your photo" />
         <div class="row">
           <button id="save" class="btn bar pink">Save PNG</button>

@@ -2,6 +2,15 @@
 
 Newest first. One entry per commit (what changed, why, what to check next).
 
+## 2026-10-28 · Privacy Policy, About Me, No Frame
+- **Landing footer** (Figma): credit line, Instagram icon, Privacy Policy and About Me links.
+- **Privacy Policy**: static page `public/PrivacyPolicy/index.html` (served at /Bedazzling/PrivacyPolicy), text as provided. Note it is a generic generator template (mentions accounts, cookies, marketing emails) that does not mention the camera; worth reviewing.
+- **About Me** screen with bio and links; Back returns to the landing page.
+- **No Frame** option in the selfie setup: saves the plain 16:9 camera view with gems.
+- **Selfie time screen** (Figma): title and "Select a frame!", four 184px buttons (No Frame, Pink Phone, Pink TV, Pink Cam), Back to decorate + Take photo row. Result screen: buttons under the photo and a Back to frame selection button.
+- **Favicon**: pink gem icon (32px favicon + 180px apple-touch icon) on the app and the Privacy Policy page.
+- **Check next**: Privacy Policy link works on the live site after the next sync.
+
 ## 2026-10-27 · Touch to click, new Gems layout, simpler gestures
 - **Touch = click**: resting the index fingertip on a button for ~0.2 s presses it (also when the thumb is tucked and it reads as a pinch). Color chips select instantly with no hover state. Open-hand hover still needs 2 s. `touchMs` in `src/config.ts`.
 - **Gems by touch**: touching a shape picks up a new gem that follows the fingertip; it drops where the fingertip was ~0.25 s before the finger stopped pointing (relaxing the finger moves the cursor, which used to throw gems off the face). Placed gems are not re-grabbed by pointing; dropping a picked-up gem off the face puts it back.

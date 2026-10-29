@@ -6,7 +6,7 @@
   "frames": [
     {
       "id": "phone",
-      "name": "Frame 1",
+      "name": "Pink Phone",
       "file": "frames/phone.png",
       "quad": [
         [
@@ -29,7 +29,7 @@
     },
     {
       "id": "tv",
-      "name": "Frame 2",
+      "name": "Pink TV",
       "file": "frames/tv.png",
       "quad": [
         [
@@ -52,7 +52,7 @@
     },
     {
       "id": "camera",
-      "name": "Frame 3",
+      "name": "Pink Cam",
       "file": "frames/camera.png",
       "quad": [
         [

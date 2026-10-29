@@ -11,6 +11,10 @@ import { Frame, Manifest, composeFrame, cropToAspect, loadManifest, windowAspect
 import iconUndo from 'pixelarticons/svg/undo.svg?raw';
 import iconHelp from 'pixelarticons/svg/circle-question.svg?raw';
 import iconTrash from 'pixelarticons/svg/trash.svg?raw';
+import iconInstagram from 'pixelarticons/svg/instagram.svg?raw';
+import iconLinkedin from 'pixelarticons/svg/linkedin.svg?raw';
+import iconMail from 'pixelarticons/svg/mail.svg?raw';
+import iconImage from 'pixelarticons/svg/image.svg?raw';
 import iconEraser from 'pixelarticons/svg/eraser.svg?raw';
 import iconBrush from 'pixelarticons/svg/brush.svg?raw';
 import iconGem from 'pixelarticons/svg/diamond-gem.svg?raw';
@@ -28,7 +32,7 @@ import iconSparkle from 'pixelarticons/svg/sparkle.svg?raw';
 import iconHand from 'pixelarticons/svg/hand.svg?raw';
 
 const ICONS: Record<string, string> = {
-  undo: iconUndo, 'circle-question': iconHelp, trash: iconTrash, eraser: iconEraser, brush: iconBrush, 'diamond-gem': iconGem,
+  instagram: iconInstagram, linkedin: iconLinkedin, mail: iconMail, image: iconImage, undo: iconUndo, 'circle-question': iconHelp, trash: iconTrash, eraser: iconEraser, brush: iconBrush, 'diamond-gem': iconGem,
   'volume-2': iconVolOn, 'volume-x': iconVolOff, 'chevron-up': iconUp, 'chevron-down': iconDown, checkbox: iconCheckbox,
   'checkbox-on': iconCheckboxOn, camera: iconCamera, heart: iconHeart, circle: iconCircle, star: iconStar, sparkle: iconSparkle, hand: iconHand,
 };
@@ -46,7 +50,7 @@ const stageEl = $('stage');
 const glCanvas = $<HTMLCanvasElement>('gl');
 const audio = new Audio();
 
-type Phase = 'landing' | 'check' | 'guide' | 'decorate' | 'setup' | 'capture' | 'result' | 'error';
+type Phase = 'landing' | 'check' | 'guide' | 'decorate' | 'setup' | 'capture' | 'result' | 'about' | 'error';
 type Tool = 'gem' | 'brush' | 'eraser';
 let phase: Phase = 'landing';
 let tool: Tool = 'gem';
@@ -101,6 +105,7 @@ function setPhase(p: Phase) {
   show('guide', p === 'guide');
   show('setup', p === 'setup');
   show('result', p === 'result');
+  show('about', p === 'about');
   show('error', p === 'error');
   show('hud', p === 'decorate');
   show('musicSetting', p !== 'capture'); // same Music panel on every page
@@ -132,7 +137,7 @@ addEventListener('resize', layout);
 
 function placeCropMask() {
   if (!selFrame) return;
-  const a = windowAspect(selFrame);
+  const a = aspectOf(selFrame);
   const W = stageEl.offsetWidth, H = stageEl.offsetHeight;
   let cw = W, ch = H;
   if (W / H > a) cw = H * a;
@@ -403,7 +408,9 @@ addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------- selfie flow
-let selFrame: Frame | null = null;
+const NO_FRAME = 'none' as const; // plain photo, no frame art
+let selFrame: Frame | typeof NO_FRAME | null = null;
+const aspectOf = (f: Frame | typeof NO_FRAME) => (f === NO_FRAME ? stage.canvas.width / stage.canvas.height : windowAspect(f));
 let busy = false;
 
 function finishDecorate() {
@@ -416,11 +423,15 @@ function finishDecorate() {
 function buildSetup() {
   const fp = $('framePick');
   fp.innerHTML = '';
-  manifest.frames.forEach((f) => {
+  const options: { label: string; value: Frame | typeof NO_FRAME }[] = [
+    { label: 'No Frame', value: NO_FRAME },
+    ...manifest.frames.map((f) => ({ label: f.name, value: f as Frame | typeof NO_FRAME })),
+  ];
+  options.forEach(({ label, value }) => {
     const b = document.createElement('button');
-    b.className = 'btn sq grey' + (f === selFrame ? ' on' : '');
-    b.innerHTML = `<i data-icon="camera"></i><span>${f.name}</span>`;
-    b.onclick = () => { selFrame = f; buildSetup(); };
+    b.className = 'btn sq grey' + (value === selFrame ? ' on' : '');
+    b.innerHTML = `<i data-icon="camera"></i><span>${label}</span>`;
+    b.onclick = () => { selFrame = value; buildSetup(); };
     fp.appendChild(b);
   });
   injectIcons(fp);
@@ -448,12 +459,12 @@ async function runCapture() {
   cd.textContent = '';
   audio.shutter();
   stage.render(0);
-  const shot = cropToAspect(stage.canvas, windowAspect(selFrame));
+  const shot = cropToAspect(stage.canvas, aspectOf(selFrame));
   const f = $('flash');
   f.classList.add('go');
   requestAnimationFrame(() => requestAnimationFrame(() => f.classList.remove('go')));
   audio.duck(false);
-  finalCanvas = await composeFrame(manifest, selFrame, shot);
+  finalCanvas = selFrame === NO_FRAME ? shot : await composeFrame(manifest, selFrame, shot);
   ($('resultImg') as HTMLImageElement).src = finalCanvas.toDataURL('image/png');
   setPhase('result');
   busy = false;
@@ -461,6 +472,7 @@ async function runCapture() {
 $('takePhoto').onclick = runCapture;
 $('setupBack').onclick = () => setPhase('decorate');
 $('retake').onclick = runCapture;
+$('backFrame').onclick = () => { setPhase('setup'); buildSetup(); };
 $('backDecor').onclick = () => setPhase('decorate');
 $('save').onclick = () => {
   if (!finalCanvas) return;
@@ -811,6 +823,9 @@ function handleHand(hs: ReturnType<HandGestures['update']>) {
     if (ev === 'done') finishDecorate();
   }
 }
+
+$('aboutBtn').onclick = () => setPhase('about');
+$('aboutBack').onclick = () => setPhase('landing');
 
 setPhase('landing');
 layout();
