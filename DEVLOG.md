@@ -2,6 +2,11 @@
 
 Newest first. One entry per commit (what changed, why, what to check next).
 
+## 2026-10-29 · Back links and page polish
+- New "‹ Back to main / decorate / select frame" text links (top left, aligned to the 1200px content column) on Privacy Policy, About Me, Gesture guide, Selfie time and the result page. Guide's Back to main goes to the landing page.
+- Result page CTA order: Back to decorate, Retake, Save PNG (primary last). Selfie time now has only Take photo at the bottom.
+- About Me: white box around the bio, Figma LinkedIn icon (`src/icons/linkedin-figma.svg`). Privacy Policy: pink pattern background, centered title, white content box. The Music panel from the Figma is not on the Privacy page (it is a separate static page).
+
 ## 2026-10-28 · Privacy Policy, About Me, No Frame
 - **Landing footer** (Figma): credit line, Instagram icon, Privacy Policy and About Me links.
 - **Privacy Policy**: static page `public/PrivacyPolicy/index.html` (served at /Bedazzling/PrivacyPolicy), text as provided. Note it is a generic generator template (mentions accounts, cookies, marketing emails) that does not mention the camera; worth reviewing.

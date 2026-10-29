@@ -10,25 +10,29 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" />
 <style>
-  body { margin: 0; font-family: 'DotGothic16', system-ui, sans-serif; color: #6d0038; line-height: 1.6; font-size: 16px;
-    background: linear-gradient(180deg, rgba(255,255,255,0) 0, rgba(255,255,255,.4) 300px, rgba(255,255,255,0) 600px), #ff92ca; }
-  main { max-width: 820px; margin: 0 auto; padding: 32px 24px 64px; }
-  .back { display: inline-block; margin-bottom: 24px; color: #fff; }
-  article { background: rgba(255,255,255,.85); border: 2px solid #fff; border-radius: 8px; padding: 32px; }
-  h1 { font-weight: 400; font-size: 40px; margin: 0 0 8px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: 'DotGothic16', system-ui, sans-serif; color: #6d0038; line-height: 1.6; font-size: 16px;
+    background: url(../assets/pattern.svg), linear-gradient(180deg, #ff93cb 0%, #ffbddf 17%, #ff95cd 38%, #ff8cc9 100%); background-size: 448px 224px, 100% 100%; background-attachment: fixed; }
+  main { max-width: 1200px; margin: 0 auto; padding: 56px 24px 80px; }
+  .back { display: inline-flex; align-items: center; gap: 4px; padding: 10px; margin-left: -10px; color: #fff; font-size: 20px; line-height: 1; }
+  .back:hover { color: #fc2894; }
+  .back svg { width: 20px; height: 20px; }
+  .back span { text-decoration: underline; }
+  h1 { font-weight: 400; font-size: 48px; line-height: 1.2; margin: 48px 0 32px; text-align: center; text-shadow: 3px 3px 0 #fff; }
+  article { background: rgba(255,255,255,.8); border: 2px solid #fff; border-radius: 8px; padding: 32px; }
   h2 { font-weight: 400; font-size: 28px; margin: 32px 0 8px; }
   h3 { font-weight: 400; font-size: 22px; margin: 24px 0 8px; }
   h4 { font-weight: 400; font-size: 18px; margin: 16px 0 8px; color: #b7236e; }
-  a { color: #b7236e; }
+  article a { color: #b7236e; }
   li > p { margin: 4px 0; }
-  .back:hover { text-decoration: none; }
+  article > p:first-child { margin-top: 0; }
 </style>
 </head>
 <body>
 <main>
-<a class="back" href="../">← Back to Bedazzle Booth</a>
-<article>
+<a class="back" href="../"><svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M8 13v-2h2v2H8Zm2-2V9h2v2h-2Zm0 4v-2h2v2h-2Zm2-6V7h2v2h-2Zm0 8v-2h2v2h-2Zm2-10V5h2v2h-2Zm0 12v-2h2v2h-2Z"/></svg><span>Back to main</span></a>
 <h1>Privacy Policy</h1>
+<article>
 <p>Last updated: October 29, 2026</p>
 <p>This Privacy Policy describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.</p>
 <p>We use Your Personal Data to provide and improve the Service. We collect, use, and disclose Your information as described in this Privacy Policy and, where required by applicable law, only where We have a valid legal basis to do so, including Your consent (where consent is required). This Privacy Policy has been created with the help of the <a href="https://www.termsfeed.com/privacy-policy-generator/" target="_blank">Privacy Policy Generator</a>.</p>

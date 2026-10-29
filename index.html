@@ -82,10 +82,10 @@
       </section>
 
       <section id="about" class="screen pink-bg hidden">
-        <button id="aboutBack" class="btn pill pink"><i data-icon="undo"></i><span>Back</span></button>
+        <button id="aboutBack" class="backlink"><i data-icon="chevron-left"></i><span>Back to main</span></button>
         <div class="aboutbox">
           <h2 class="pixel-title dark">About Me</h2>
-          <p>Hi, I’m Sohee, a UI/UX designer based in Toronto. I vibe code for fun and build small apps with cute graphics. If you have questions or feedback, or want to see more of my projects, come say hi on my social media!</p>
+          <div class="whitebox"><p>Hi, I’m Sohee, a UI/UX designer based in Toronto. I vibe code for fun and build small apps with cute graphics. If you have questions or feedback, or want to see more of my projects, come say hi on my social media!</p></div>
           <h3>Get in touch</h3>
           <a href="https://www.linkedin.com/in/soheedsgn/" target="_blank" rel="noopener"><i data-icon="linkedin"></i><u>https://www.linkedin.com/in/soheedsgn/</u></a>
           <a href="https://www.instagram.com/umactuallydesignis" target="_blank" rel="noopener"><i data-icon="instagram"></i><u>https://www.instagram.com/umactuallydesignis</u></a>
@@ -101,6 +101,7 @@
       </section>
 
       <section id="guide" class="screen pink-bg hidden">
+        <button id="guideBack" class="backlink"><i data-icon="chevron-left"></i><span>Back to main</span></button>
         <h2 class="pixel-title dark">Gesture guide</h2>
         <p class="sub">Your hand lights up the matching card. Try them! (Mouse works too.)</p>
         <div class="cards">
@@ -114,6 +115,7 @@
       </section>
 
       <section id="setup" class="screen pink-bg hidden">
+        <button id="setupBack" class="backlink"><i data-icon="chevron-left"></i><span>Back to decorate</span></button>
         <div class="setupbox">
           <div class="titles">
             <h2 class="pixel-title dark">Selfie time</h2>
@@ -121,19 +123,18 @@
           </div>
           <div class="row" id="framePick"></div>
           <div class="row">
-            <button id="setupBack" class="btn bar grey">Back to decorate</button>
             <button id="takePhoto" class="btn bar pink" disabled>Take photo</button>
           </div>
         </div>
       </section>
 
       <section id="result" class="screen pink-bg hidden">
-        <button id="backFrame" class="btn pill pink">Back to frame selection</button>
+        <button id="backFrame" class="backlink"><i data-icon="chevron-left"></i><span>Back to select frame</span></button>
         <img id="resultImg" alt="Your photo" />
         <div class="row">
-          <button id="save" class="btn bar pink">Save PNG</button>
-          <button id="retake" class="btn bar grey">Retake</button>
           <button id="backDecor" class="btn bar grey">Back to decorate</button>
+          <button id="retake" class="btn bar grey">Retake</button>
+          <button id="save" class="btn bar pink">Save PNG</button>
         </div>
       </section>
 

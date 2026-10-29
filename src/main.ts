@@ -12,7 +12,8 @@ import iconUndo from 'pixelarticons/svg/undo.svg?raw';
 import iconHelp from 'pixelarticons/svg/circle-question.svg?raw';
 import iconTrash from 'pixelarticons/svg/trash.svg?raw';
 import iconInstagram from 'pixelarticons/svg/instagram.svg?raw';
-import iconLinkedin from 'pixelarticons/svg/linkedin.svg?raw';
+import iconLinkedin from './icons/linkedin-figma.svg?raw';
+import iconChevronLeft from 'pixelarticons/svg/chevron-left.svg?raw';
 import iconMail from 'pixelarticons/svg/mail.svg?raw';
 import iconImage from 'pixelarticons/svg/image.svg?raw';
 import iconEraser from 'pixelarticons/svg/eraser.svg?raw';
@@ -32,7 +33,7 @@ import iconSparkle from 'pixelarticons/svg/sparkle.svg?raw';
 import iconHand from 'pixelarticons/svg/hand.svg?raw';
 
 const ICONS: Record<string, string> = {
-  instagram: iconInstagram, linkedin: iconLinkedin, mail: iconMail, image: iconImage, undo: iconUndo, 'circle-question': iconHelp, trash: iconTrash, eraser: iconEraser, brush: iconBrush, 'diamond-gem': iconGem,
+  'chevron-left': iconChevronLeft, instagram: iconInstagram, linkedin: iconLinkedin, mail: iconMail, image: iconImage, undo: iconUndo, 'circle-question': iconHelp, trash: iconTrash, eraser: iconEraser, brush: iconBrush, 'diamond-gem': iconGem,
   'volume-2': iconVolOn, 'volume-x': iconVolOff, 'chevron-up': iconUp, 'chevron-down': iconDown, checkbox: iconCheckbox,
   'checkbox-on': iconCheckboxOn, camera: iconCamera, heart: iconHeart, circle: iconCircle, star: iconStar, sparkle: iconSparkle, hand: iconHand,
 };
@@ -639,6 +640,7 @@ function enterDecorate() {
   else openGuide();
 }
 $('guideOk').onclick = closeGuide;
+$('guideBack').onclick = () => setPhase('landing');
 $('help').onclick = openGuide;
 function lightGuide(hs: ReturnType<HandGestures['update']>, now: number) {
   const on: Record<string, boolean> = {
